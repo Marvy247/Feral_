@@ -1,0 +1,329 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Feral - agent security</title>
+<style>
+  :root { --bg:#0b0e13; --panel:#141a23; --line:#243040; --text:#e6edf6; --dim:#8fa3bb; --green:#3ddc97; --red:#ff6b6b; --amber:#ffc857; --blue:#6aa9ff; }
+  * { box-sizing: border-box; }
+  body { margin:0; background:var(--bg); color:var(--text); font:14px/1.5 ui-monospace, SFMono-Regular, Menlo, Consolas, monospace; }
+  header { display:flex; align-items:center; gap:16px; padding:16px 22px; border-bottom:1px solid var(--line); background:var(--panel); position:sticky; top:0; z-index:2; flex-wrap:wrap; }
+  .logo { font-size:20px; letter-spacing:3px; font-weight:700; }
+  .badge { padding:3px 9px; border-radius:999px; border:1px solid var(--line); font-size:12px; }
+  .ok { color:var(--green); border-color:var(--green); }
+  .warn { color:var(--amber); border-color:var(--amber); }
+  .bad { color:var(--red); border-color:var(--red); }
+  .muted { color:var(--dim); }
+  main { padding:18px 22px 48px; display:grid; grid-template-columns: minmax(0,1fr) 340px; gap:18px; }
+  @media (max-width: 1000px) { main { grid-template-columns: 1fr; } }
+  section { background:var(--panel); border:1px solid var(--line); border-radius:10px; padding:14px 16px; margin-bottom:18px; }
+  h2 { margin:0 0 12px; font-size:14px; letter-spacing:1.5px; text-transform:uppercase; color:var(--dim); font-weight:600; }
+  .agents { display:grid; grid-template-columns:repeat(auto-fit,minmax(250px,1fr)); gap:12px; }
+  .agent { border:1px solid var(--line); border-radius:8px; padding:12px; background:#101722; }
+  .agent h3 { margin:0 0 2px; font-size:15px; }
+  .row { display:flex; justify-content:space-between; gap:8px; margin:3px 0; }
+  .bar { height:7px; background:#0a0f16; border-radius:4px; overflow:hidden; margin:5px 0 8px; }
+  .bar > i { display:block; height:100%; background:var(--green); }
+  .bar.reserved > i { background:var(--amber); }
+  table { width:100%; border-collapse:collapse; font-size:13px; }
+  th, td { text-align:left; padding:6px 8px; border-bottom:1px solid var(--line); vertical-align:top; }
+  th { color:var(--dim); font-weight:500; font-size:11px; text-transform:uppercase; letter-spacing:1px; }
+  .verdict { font-weight:700; }
+  .v-allow { color:var(--green); } .v-deny { color:var(--red); } .v-require_approval { color:var(--amber); }
+  button { background:#1b2635; color:var(--text); border:1px solid var(--line); border-radius:6px; padding:5px 10px; cursor:pointer; font:inherit; }
+  button:hover { border-color:var(--blue); }
+  button.primary { border-color:var(--blue); color:var(--blue); }
+  input, textarea { width:100%; background:#0a0f16; border:1px solid var(--line); color:var(--text); border-radius:6px; padding:7px 9px; font:inherit; }
+  textarea { min-height:110px; resize:vertical; }
+  .feed div { padding:6px 0; border-bottom:1px solid var(--line); font-size:13px; }
+  .empty { color:var(--dim); font-size:13px; }
+  .grid2 { display:grid; grid-template-columns:1fr 1fr; gap:8px; }
+  .pill { font-size:11px; padding:1px 7px; border-radius:999px; border:1px solid var(--line); }
+  .flag { color:var(--amber); }
+  code { color:var(--blue); }
+</style>
+</head>
+<body>
+<header>
+  <div class="logo">FERAL</div>
+  <div class="muted" id="policyName">loading policy...</div>
+  <span class="badge" id="vaultStatus">vault -</span>
+  <span class="badge" id="breakerBadge">breaker 0</span>
+  <span class="badge" id="auditBadge">audit -</span>
+  <span class="muted" id="hash"></span>
+</header>
+
+<main>
+  <div>
+    <section>
+      <h2>Agents</h2>
+      <div class="agents" id="agents"><div class="empty">loading agents...</div></div>
+    </section>
+
+    <section>
+      <h2>Aggregate budget (all agents)</h2>
+      <div id="aggregate" class="empty">loading...</div>
+    </section>
+
+    <section>
+      <h2>Approval queue</h2>
+      <div id="approvals" class="empty">nothing waiting</div>
+    </section>
+
+    <section>
+      <h2>Governance</h2>
+      <div id="timelocks" class="empty">no pending timelocks</div>
+      <div class="grid2" style="margin-top:12px">
+        <button onclick="governance('emergency-freeze')">Emergency freeze (guardian)</button>
+        <button onclick="governance('thaw')">Thaw (owner)</button>
+      </div>
+      <div class="grid2" style="margin-top:8px">
+        <input id="timelockAmount" value="200" aria-label="timelock amount" />
+        <button onclick="proposeTimelock()">Propose withdrawal timelock</button>
+      </div>
+    </section>
+
+    <section>
+      <h2>Policy simulation</h2>
+      <p class="muted">Paste a proposed policy. Every historical decision is replayed at the moment it was made.</p>
+      <textarea id="proposed" spellcheck="false"></textarea>
+      <div style="margin-top:8px"><button class="primary" onclick="simulate()">Compare with current policy</button></div>
+      <div id="simulation" class="empty" style="margin-top:10px">no simulation yet</div>
+    </section>
+
+    <section>
+      <h2>Decision feed</h2>
+      <table>
+        <thead><tr><th>time</th><th>agent</th><th>action</th><th>amount</th><th>verdict</th><th>reputation</th><th>reasons</th></tr></thead>
+        <tbody id="feed"><tr><td colspan="7" class="empty">loading...</td></tr></tbody>
+      </table>
+    </section>
+  </div>
+
+  <aside>
+    <section>
+      <h2>Anomaly feed</h2>
+      <div id="anomaly" class="feed empty">no active flags</div>
+    </section>
+    <section>
+      <h2>Execute an action</h2>
+      <input id="actor" value="argo.near" aria-label="actor" />
+      <div class="grid2" style="margin-top:8px">
+        <input id="amount" value="5" aria-label="amount" />
+        <input id="asset" value="USDC" aria-label="asset" />
+      </div>
+      <input id="to" value="compute.near" aria-label="recipient" style="margin-top:8px" />
+      <div class="grid2" style="margin-top:8px">
+        <button class="primary" onclick="submitAction(false)">Submit</button>
+        <button onclick="submitAction(true)">Dry run</button>
+      </div>
+      <div id="decision" class="empty" style="margin-top:10px"></div>
+    </section>
+    <section>
+      <h2>Policy hash</h2>
+      <div id="policyHash" class="muted" style="word-break:break-all">-</div>
+    </section>
+  </aside>
+</main>
+
+<script>
+let latest = null;
+const esc = (value) => String(value ?? '').replace(/[&<>"]/g, (c) => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+
+async function api(path, options) {
+  const response = await fetch(path, options);
+  const payload = await response.json();
+  if (!response.ok) throw new Error(payload.error || response.statusText);
+  return payload;
+}
+
+function bar(value, limit, cls) {
+  const pct = limit > 0 ? Math.min(100, Math.max(0, (Number(value) / Number(limit)) * 100)) : 0;
+  return `<div class="bar ${cls || ''}"><i style="width:${pct.toFixed(1)}%"></i></div>`;
+}
+
+function renderAgents(agents) {
+  if (!agents.length) return '<div class="empty">no agents registered</div>';
+  return agents.map((agent) => {
+    const usdc = agent.effective.USDC || {};
+    const spent = Number(usdc.spentDay || 0), limit = Number(usdc.daily || 0);
+    const repClass = agent.reputation >= 80 ? 'ok' : agent.reputation >= 40 ? 'warn' : 'bad';
+    return `<div class="agent">
+      <div class="row"><h3>${esc(agent.account)}</h3><span class="badge ${repClass}">rep ${agent.reputation}</span></div>
+      <div class="muted">${esc(agent.tier)} - ${esc(agent.status)}</div>
+      <div class="row"><span>daily USDC</span><span>${esc(usdc.spentDay || '0')} / ${esc(usdc.daily || '0')}</span></div>
+      ${bar(spent, limit)}
+      <div class="row muted"><span>per tx</span><span>${esc(usdc.perTx || '-')} USDC</span></div>
+      <div class="row muted"><span>anomaly</span><span class="${agent.anomaly.score > 0 ? 'flag' : ''}">${agent.anomaly.score} ${agent.anomaly.flags.length ? '[' + agent.anomaly.flags.join(', ') + ']' : ''}</span></div>
+      <div class="row muted"><span>breaker</span><span>level ${agent.breaker.level}</span></div>
+      <div class="row" style="margin-top:8px">
+        <button onclick="agentAction('${esc(agent.account)}','pause')">Pause</button>
+        <button onclick="agentAction('${esc(agent.account)}','unpause')">Unpause</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function renderAggregate(aggregate) {
+  const entries = Object.entries(aggregate || {});
+  if (!entries.length) return '<div class="empty">no aggregate limits</div>';
+  return entries.map(([asset, row]) => `
+    <div class="row"><strong>${esc(asset)}</strong><span>${esc(row.spent)} spent / ${esc(row.limit)} - ${esc(row.remaining)} left</span></div>
+    ${bar(row.spent, row.limit)}
+    <div class="row muted"><span>reserved by pending approvals</span><span>${esc(row.reserved)}</span></div>`).join('');
+}
+
+function renderApprovals(approvals) {
+  if (!approvals.length) return '<div class="empty">nothing waiting</div>';
+  return `<table><thead><tr><th>agent</th><th>amount</th><th>to</th><th>expires</th><th></th></tr></thead><tbody>
+    ${approvals.map((approval) => `<tr>
+      <td>${esc(approval.action.actor)}</td><td>${esc(approval.action.amount)} ${esc(approval.action.asset)}</td>
+      <td>${esc(approval.action.to || '-')}</td><td class="muted">${esc(approval.expiresAt.slice(11, 19))}</td>
+      <td><button onclick="decide('approve','${esc(approval.id)}')">Approve</button>
+          <button onclick="decide('reject','${esc(approval.id)}')">Reject</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderTimelocks(timelocks) {
+  if (!timelocks.length) return '<div class="empty">no pending timelocks</div>';
+  return `<table><thead><tr><th>action</th><th>params</th><th>executes</th><th></th></tr></thead><tbody>
+    ${timelocks.map((timelock) => `<tr>
+      <td>${esc(timelock.actionType)}</td><td class="muted">${esc(JSON.stringify(timelock.params))}</td>
+      <td>${esc(new Date(timelock.executesAt).toISOString().slice(11, 19))}</td>
+      <td><button onclick="cancelTimelock('${esc(timelock.id)}')">Cancel</button>
+          <button onclick="executeTimelock('${esc(timelock.id)}')">Execute</button></td>
+    </tr>`).join('')}
+  </tbody></table>`;
+}
+
+function renderFeed(audit) {
+  const rows = [...audit].reverse().slice(0, 60);
+  if (!rows.length) return '<tr><td colspan="7" class="empty">no decisions yet</td></tr>';
+  return rows.map((record) => `<tr>
+    <td class="muted">${esc(record.at.slice(11, 19))}</td>
+    <td>${esc(record.agent)}</td><td>${esc(record.kind)}</td>
+    <td>${esc(record.amount)} ${esc(record.asset)}</td>
+    <td class="verdict v-${esc(record.verdict)}">${esc(record.verdict)}</td>
+    <td class="muted">${record.reputationBefore} &rarr; ${record.reputationAfter}</td>
+    <td class="muted">${esc(record.reasons.join(', '))}</td>
+  </tr>`).join('');
+}
+
+function renderAnomaly(feed, agents) {
+  const rows = [...feed];
+  for (const agent of agents) {
+    if (agent.breaker.level > 0) rows.push({ agent: agent.account, flags: ['CIRCUIT_BREAKER_' + agent.breaker.level], score: agent.anomaly.score, severity: 'high', at: new Date().toISOString() });
+  }
+  if (!rows.length) return 'no active flags';
+  return rows.map((row) => `<div><span class="badge ${row.severity === 'high' ? 'bad' : row.severity === 'medium' ? 'warn' : ''}">${esc(row.severity)}</span>
+    <strong>${esc(row.agent)}</strong> <span class="flag">${esc(row.flags.join(', '))}</span>
+    <div class="muted">score ${row.score} at ${esc(row.at.slice(11, 19))}</div></div>`).join('');
+}
+
+function render(data) {
+  latest = data;
+  document.getElementById('policyName').textContent = data.policy.name;
+  document.getElementById('hash').textContent = data.policy.hash.slice(0, 12);
+  document.getElementById('policyHash').textContent = data.policy.hash;
+  const breaker = data.vault.breaker.level;
+  const vaultBadge = document.getElementById('vaultStatus');
+  vaultBadge.textContent = breaker >= 4 ? 'vault FROZEN' : breaker >= 3 ? 'vault PAUSED' : 'vault normal';
+  vaultBadge.className = 'badge ' + (breaker >= 3 ? 'bad' : 'ok');
+  const breakerBadge = document.getElementById('breakerBadge');
+  breakerBadge.textContent = 'breaker ' + breaker;
+  breakerBadge.className = 'badge ' + (breaker >= 3 ? 'bad' : breaker > 0 ? 'warn' : 'ok');
+  const auditBadge = document.getElementById('auditBadge');
+  auditBadge.textContent = data.auditHead.ok ? `audit verified (${data.auditHead.records})` : 'audit BROKEN';
+  auditBadge.className = 'badge ' + (data.auditHead.ok ? 'ok' : 'bad');
+  document.getElementById('agents').innerHTML = renderAgents(data.agents);
+  document.getElementById('aggregate').innerHTML = renderAggregate(data.vault.aggregate);
+  document.getElementById('approvals').innerHTML = renderApprovals(data.approvals);
+  document.getElementById('timelocks').innerHTML = renderTimelocks(data.timelocks);
+  document.getElementById('anomaly').innerHTML = renderAnomaly(data.anomalyFeed, data.agents);
+  document.getElementById('feed').innerHTML = renderFeed(data.audit);
+  const actor = document.getElementById('actor');
+  if (!actor.dataset.touched && data.agents[0]) actor.value = data.agents[0].account;
+}
+
+async function refresh() {
+  try { render(await api('/api/summary')); }
+  catch (err) { document.getElementById('policyName').textContent = 'dashboard offline: ' + err.message; }
+}
+
+async function decide(kind, id) {
+  try {
+    await api('/api/' + kind, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ id, approver: latest?.policy.owner }) });
+  } catch (err) { alert(err.message); }
+  refresh();
+}
+
+async function agentAction(account, verb) {
+  try { await api(`/api/agents/${encodeURIComponent(account)}/${verb}`, { method: 'POST' }); }
+  catch (err) { alert(err.message); }
+  refresh();
+}
+
+async function governance(route) {
+  try { await api('/api/' + route, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ actor: latest?.policy.owner }) }); }
+  catch (err) { alert(err.message); }
+  refresh();
+}
+
+async function proposeTimelock() {
+  const amount = document.getElementById('timelockAmount').value;
+  try { await api('/api/timelock/propose', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ actionType: 'withdraw', params: { asset: 'USDC', amount } }) }); }
+  catch (err) { alert(err.message); }
+  refresh();
+}
+
+async function cancelTimelock(id) {
+  try { await api(`/api/timelock/${id}/cancel`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ actor: latest?.policy.owner }) }); }
+  catch (err) { alert(err.message); }
+  refresh();
+}
+
+async function executeTimelock(id) {
+  try { await api(`/api/timelock/${id}/execute`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ actor: latest?.policy.owner }) }); }
+  catch (err) { alert(err.message); }
+  refresh();
+}
+
+async function submitAction(dryRun) {
+  const action = {
+    id: 'ui_' + Date.now(),
+    kind: 'ft.transfer',
+    actor: document.getElementById('actor').value,
+    amount: document.getElementById('amount').value,
+    asset: document.getElementById('asset').value,
+    to: document.getElementById('to').value,
+  };
+  const box = document.getElementById('decision');
+  try {
+    const result = await api('/api/evaluate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ action, dryRun }) });
+    const decision = result.decision;
+    box.innerHTML = `<span class="verdict v-${esc(decision.verdict)}">${esc(decision.verdict)}</span>
+      <div class="muted">${esc(decision.reasons.map((r) => r.code).join(', ') || 'all checks passed')}</div>
+      <div class="muted">reputation ${decision.reputation ?? '-'} - anomaly ${decision.anomalyScore ?? '-'} - breaker ${decision.circuitBreakerLevel ?? '-'}</div>`;
+  } catch (err) { box.textContent = err.message; }
+  refresh();
+}
+
+async function simulate() {
+  const policy = document.getElementById('proposed').value;
+  const box = document.getElementById('simulation');
+  if (!policy.trim()) { box.textContent = 'paste a policy first'; return; }
+  try {
+    const result = await api('/api/simulate', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ policy }) });
+    box.innerHTML = `<div>${result.changedCount} of ${result.totalActions} historical decisions would change</div>` +
+      result.diffs.map((diff) => `<div class="muted">${esc(diff.actionId)}: ${esc(diff.oldVerdict)} &rarr; ${esc(diff.newVerdict)} [${esc(diff.newReasons.join(', '))}]</div>`).join('');
+  } catch (err) { box.textContent = err.message; }
+}
+
+document.getElementById('actor').addEventListener('input', (event) => { event.target.dataset.touched = '1'; });
+refresh();
+setInterval(refresh, 3000);
+</script>
+</body>
+</html>

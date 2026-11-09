@@ -1,0 +1,18 @@
+{
+  "id": "swap_arb_001",
+  "kind": "intent.swap",
+  "actor": "argo.near",
+  "asset": "NEAR",
+  "amount": "1",
+  "quote": {
+    "venue": "near-intents",
+    "originAsset": "NEAR",
+    "originAssetId": "nep141:wrap.near",
+    "destinationAsset": "nep141:arb-0xaf88d065e77c8cc2239327c5edb3a432268e5831.omft.near",
+    "destinationAddress": "0x583ddbf02324f75c3963c45686d52afaf2368c2f",
+    "amountOut": "4917804",
+    "minAmountOut": "4893214",
+    "slippageBps": 50,
+    "expiresAt": "2026-11-02T12:05:00.000Z"
+  }
+}

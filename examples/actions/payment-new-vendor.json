@@ -1,0 +1,9 @@
+{
+  "id": "invoice_2026_11_0001",
+  "kind": "ft.transfer",
+  "actor": "argo.near",
+  "asset": "USDC",
+  "amount": "5",
+  "to": "compute.near",
+  "reason": "paying for 40k tokens of inference, invoice 2026-11-0001"
+}

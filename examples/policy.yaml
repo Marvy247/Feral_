@@ -1,0 +1,173 @@
+# Feral policy: what the agents under this vault may do with the owner's money.
+#
+# Read this as a contract. Each agent can spend inside its own walls and nothing
+# else; the vault has aggregate walls no combination of agents can cross. The
+# policy is pinned by hash; the hash goes on-chain and into every audit record,
+# so a changed rule is visible after the fact.
+version: 2
+name: "argo-spending-policy"
+owner: alice.near
+
+# M-of-N administrative actions. A single compromised owner key is not enough.
+multisig:
+  threshold: 2
+  members:
+    - alice.near
+    - bob.near
+    - carol.near
+
+# Watchers may cancel timelocked administrative actions.
+watchers:
+  - dave.near
+# Guardians may trigger an emergency freeze of the whole vault.
+guardians:
+  - alice.near
+  - dave.near
+
+# One vault, three agents, independent limits.
+agents:
+  - account: argo.near
+    tier: worker
+    limits:
+      perTx:
+        NEAR: 1.5
+        USDC: 25
+      daily:
+        NEAR: 5
+        USDC: 100
+      monthly:
+        NEAR: 60
+        USDC: 800
+  - account: scout.near
+    tier: worker
+    limits:
+      perTx:
+        NEAR: 5
+        USDC: 100
+      daily:
+        NEAR: 20
+        USDC: 200
+      monthly:
+        NEAR: 200
+        USDC: 1000
+  - account: sentry.near
+    tier: supervisor
+    limits:
+      perTx:
+        NEAR: 5
+        USDC: 100
+      daily:
+        NEAR: 20
+        USDC: 200
+      monthly:
+        NEAR: 200
+        USDC: 1000
+
+limits:
+  # Default limits, also used by any agent without its own block above.
+  perTx:
+    NEAR: 1.5
+    USDC: 25
+  daily:
+    NEAR: 5
+    USDC: 100
+  monthly:
+    NEAR: 60
+    USDC: 800
+  defaultPerTxUsd: 20
+  # Vault-wide caps shared by every agent.
+  aggregate:
+    daily:
+      NEAR: 20
+      USDC: 200
+    monthly:
+      NEAR: 200
+      USDC: 3000
+
+counterparties:
+  mode: strict
+  allow:
+    - api.data-market.near
+    - compute.near
+    - storage.near
+    - vendor.near
+  deny:
+    - drainer.near
+  requireApprovalForNew: true
+
+approvals:
+  thresholdUsd: 10
+  approvers:
+    - alice.near
+    - bob.near
+  quorum: 1
+  ttlSeconds: 900
+
+velocity:
+  maxTxPerHour: 6
+  minIntervalSeconds: 5
+
+actions:
+  allow:
+    - near.transfer
+    - ft.transfer
+    - intent.swap
+    - api.pay
+  deny:
+    - key.add
+    - key.delete
+    - contract.call
+    - stake.delegate
+
+intents:
+  venues:
+    - near-intents
+  maxSlippageBps: 100
+  requireAllowlistedDestination: true
+  # The only address these agents may ever receive swap output on. It is not a
+  # hardcoded string: it is the address NEAR chain signatures derives for
+  # (argo.near, "ethereum-1"). Verify with `node src/cli/feral.ts chainsig`.
+  allowedDestinations:
+    - "0x583ddbf02324f75c3963c45686d52afaf2368c2f"
+  perChainLimits:
+    ethereum:
+      daily: 50
+      monthly: 500
+    arbitrum:
+      daily: 30
+      monthly: 300
+
+# Reputation is earned, then scales every limit: base * reputation / 100.
+reputation:
+  initial: 100
+  cleanSpendBonus: 1
+  denyPenalty: 10
+  approvalBonus: 2
+  anomalyPenalty: 15
+  recoveryWindowDays: 30
+  recoveryBonus: 20
+  freezeThreshold: 0
+
+# Anomaly detection: bursts, single-destination concentration, size outliers.
+anomaly:
+  burstThreshold: 5
+  drainageThreshold: 0.5
+  deviationSigma: 5
+  baselineUpdateInterval: 100
+  autoEscalate: true
+
+# Automatic breakers; levels 1-2 need no human, 3-4 do.
+circuitBreakers:
+  level1Duration: 3600
+  level1LimitFraction: 0.1
+  level2RequiresOwner: true
+  level3RequiresQuorum: 2
+  level4Timelock: 86400
+
+governance:
+  timelockDelay: 3600
+  watcherCanCancel: true
+
+risk:
+  escalateAboveBudgetFraction: 0.8
+  escalateOnNewCounterparty: true

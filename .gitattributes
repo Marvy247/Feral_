@@ -1,0 +1,7 @@
+# Keep the repository LF in history so a Windows checkout and a Linux CI run
+# produce identical bytes. Binary artefacts are never touched.
+* text=auto eol=lf
+
+*.png binary
+*.wasm binary
+*.7z binary

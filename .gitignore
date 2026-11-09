@@ -1,0 +1,19 @@
+node_modules/
+.next/
+*.tsbuildinfo
+data/tmp-state/
+data/state/
+*.log
+.DS_Store
+contract/target/
+.env
+.env.*
+!.env.example
+# Testnet account keys and run output: never commit private keys.
+data/*.json
+!data/fixtures/**
+# contains personal data (name, email, links) - never commit it
+submission.json
+__pycache__/
+*.pyc
+docs/shots/video/

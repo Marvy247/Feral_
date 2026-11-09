@@ -1,0 +1,30 @@
+[package]
+name = "feral-vault"
+version = "0.1.0"
+edition = "2021"
+rust-version = "1.93"
+description = "Feral on-chain agent security platform: full policy enforcement, adaptive reputation, multi-agent coordination, anomaly detection"
+license = "MIT OR Apache-2.0"
+repository = "https://github.com/feral-security/feral"
+publish = false
+
+[lib]
+crate-type = ["cdylib", "rlib"]
+
+[dependencies]
+near-sdk = "=5.7.0"
+# Needed as a direct dependency so the `BorshSerialize`/`BorshDeserialize` derives
+# can resolve the crate path (near-sdk re-exports the same borsh 1.x).
+borsh = { version = "1.0", features = ["derive"] }
+
+[dev-dependencies]
+near-sdk = { version = "=5.7.0", features = ["unit-testing"] }
+
+# NEAR wasm size / determinism knobs. `panic = "abort"` is intentionally not set
+# so that `cargo test --release` still works (tests need unwinding).
+[profile.release]
+codegen-units = 1
+opt-level = "z"
+lto = true
+debug = false
+overflow-checks = true

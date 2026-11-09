@@ -1,0 +1,175 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* ── Custom Animations ──────────────────────────── */
+
+@keyframes spin-slow {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0px); }
+  50%      { transform: translateY(-10px); }
+}
+@keyframes glow {
+  0%, 100% { box-shadow: 0 0 20px rgba(14, 165, 233, 0.3); }
+  50%      { box-shadow: 0 0 30px rgba(14, 165, 233, 0.6); }
+}
+@keyframes slideInFromLeft {
+  0%   { transform: translateX(-100%); opacity: 0; }
+  100% { transform: translateX(0); opacity: 1; }
+}
+@keyframes fadeIn {
+  0%   { opacity: 0; }
+  100% { opacity: 1; }
+}
+@keyframes bounceIn {
+  0%   { transform: scale(0.3); opacity: 0; }
+  50%  { transform: scale(1.05); }
+  70%  { transform: scale(0.9); }
+  100% { transform: scale(1); opacity: 1; }
+}
+
+.animate-spin-slow        { animation: spin-slow 20s linear infinite; }
+.animate-float            { animation: float 3s ease-in-out infinite; }
+.animate-glow             { animation: glow 2s ease-in-out infinite; }
+.animate-slide-in-from-left { animation: slideInFromLeft 0.5s ease-out; }
+.animate-fade-in          { animation: fadeIn 0.6s ease-out; }
+.animate-bounce-in        { animation: bounceIn 0.6s ease-out; }
+
+/* ── Design Tokens (Light-first) ────────────────── */
+
+:root {
+  --color-canvas: 0 0% 100%;
+  --color-surface-1: 210 20% 98%;
+  --color-surface-2: 210 16% 96%;
+  --color-surface-3: 210 16% 93%;
+  --color-glass-bg: rgba(255, 255, 255, 0.88);
+  --color-glass-border: rgba(15, 23, 42, 0.08);
+  --color-glass-hover: rgba(15, 23, 42, 0.04);
+  --color-brand: 199 89% 42%;
+  --color-brand-hover: 199 89% 34%;
+  --color-brand-soft: rgba(14, 165, 233, 0.08);
+  --color-brand-soft-2: rgba(14, 165, 233, 0.14);
+  --color-brand-glow: rgba(14, 165, 233, 0.20);
+  --color-line: rgba(15, 23, 42, 0.08);
+  --color-line-strong: rgba(15, 23, 42, 0.14);
+  --color-text-main: 222 47% 11%;
+  --color-text-muted: 215 16% 42%;
+  --color-text-faint: 215 14% 55%;
+}
+
+.dark {
+  --color-canvas: 222 47% 8%;
+  --color-surface-1: 222 47% 10%;
+  --color-surface-2: 222 30% 14%;
+  --color-surface-3: 222 30% 16%;
+  --color-glass-bg: rgba(6, 11, 22, 0.88);
+  --color-glass-border: rgba(255, 255, 255, 0.05);
+  --color-glass-hover: rgba(255, 255, 255, 0.08);
+  --color-brand: 199 89% 48%;
+  --color-brand-hover: 199 89% 38%;
+  --color-brand-soft: rgba(14, 165, 233, 0.08);
+  --color-brand-soft-2: rgba(14, 165, 233, 0.12);
+  --color-brand-glow: rgba(14, 165, 233, 0.25);
+  --color-line: rgba(255, 255, 255, 0.06);
+  --color-line-strong: rgba(255, 255, 255, 0.10);
+  --color-text-main: 210 40% 98%;
+  --color-text-muted: 215 20% 50%;
+  --color-text-faint: 215 15% 35%;
+}
+
+/* ── shadcn/ui CSS Variables ────────────────────── */
+
+:root {
+  --background: 0 0% 100%;
+  --foreground: 240 10% 3.9%;
+  --card: 0 0% 100%;
+  --card-foreground: 240 10% 3.9%;
+  --popover: 0 0% 100%;
+  --popover-foreground: 240 10% 3.9%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 355.7 100% 97.3%;
+  --secondary: 240 4.8% 95.9%;
+  --secondary-foreground: 240 5.9% 10%;
+  --muted: 240 4.8% 95.9%;
+  --muted-foreground: 240 3.8% 46.1%;
+  --accent: 240 4.8% 95.9%;
+  --accent-foreground: 240 5.9% 10%;
+  --destructive: 0 84.2% 60.2%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 240 5.9% 90%;
+  --input: 240 5.9% 90%;
+  --ring: 199 89% 48%;
+  --radius: 0.75rem;
+}
+
+.dark {
+  --background: 222 47% 8%;
+  --foreground: 210 40% 98%;
+  --card: 222 47% 10%;
+  --card-foreground: 210 40% 98%;
+  --popover: 222 40% 12%;
+  --popover-foreground: 210 40% 98%;
+  --primary: 199 89% 48%;
+  --primary-foreground: 222 47% 8%;
+  --secondary: 222 30% 16%;
+  --secondary-foreground: 210 40% 90%;
+  --muted: 222 30% 14%;
+  --muted-foreground: 215 20% 50%;
+  --accent: 200 70% 20%;
+  --accent-foreground: 199 89% 70%;
+  --destructive: 0 62% 40%;
+  --destructive-foreground: 0 0% 98%;
+  --border: 222 30% 14%;
+  --input: 222 30% 14%;
+  --ring: 199 89% 48%;
+}
+
+/* ── Layer Base ──────────────────────────────────── */
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+}
+
+/* ── Custom Utilities (Tailwind v3 compatible) ──── */
+
+@layer utilities {
+  .bg-glass { background: var(--color-glass-bg); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+  .border-glass { border-color: var(--color-glass-border); }
+  .bg-sidebar { background: var(--color-glass-bg); backdrop-filter: blur(20px) saturate(180%); -webkit-backdrop-filter: blur(20px) saturate(180%); }
+  .bg-topbar { background: rgba(255, 255, 255, 0.85); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+
+  .card-surface { @apply rounded-2xl border border-slate-200 bg-white; }
+  .card-surface-hover { @apply card-surface hover:bg-slate-50 transition-colors; }
+  .card-ghost { @apply rounded-2xl border border-slate-200/70 bg-slate-50/60; }
+  .card-subtle { @apply rounded-xl border border-slate-200 bg-slate-50/70; }
+
+  .bg-brand-gradient { background: linear-gradient(135deg, #0284c7 0%, #0ea5e9 50%, #38bdf8 100%); }
+  .shadow-brand-glow { box-shadow: 0 0 20px var(--color-brand-glow); }
+  .btn-sky { @apply bg-gradient-to-r from-sky-600 to-sky-500 hover:from-sky-500 hover:to-sky-400 text-white shadow-lg shadow-sky-900/30 rounded-xl; }
+  .badge-sky { @apply bg-sky-50 text-sky-700 border border-sky-200 text-xs px-2 py-0.5 rounded-full font-medium; }
+  .badge-amber { @apply bg-amber-50 text-amber-700 border border-amber-200 text-xs px-2 py-0.5 rounded-full font-medium; }
+  .badge-red { @apply bg-red-50 text-red-700 border border-red-200 text-xs px-2 py-0.5 rounded-full font-medium; }
+
+  .icon-well { @apply w-12 h-12 rounded-xl flex items-center justify-center shrink-0 shadow-lg; background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%); }
+  .icon-well-sm { @apply w-9 h-9 rounded-lg flex items-center justify-center shrink-0; background: linear-gradient(135deg, #0c4a6e 0%, #075985 100%); }
+  .icon-well-empty { @apply w-14 h-14 rounded-2xl flex items-center justify-center mx-auto mb-4 shadow-lg; background: linear-gradient(135deg, #0c4a6e, #075985); }
+
+  .field-glass { @apply bg-white border-slate-300 text-slate-900 placeholder:text-slate-400 focus:border-sky-500/60 focus:bg-white; }
+  .field-disabled { @apply bg-slate-100 border-slate-200 text-slate-400 cursor-default; }
+
+  .bg-dashboard {
+    background-color: #f8fafc;
+    background-image:
+      radial-gradient(ellipse 80% 50% at 15% 40%, rgba(14,165,233,0.07) 0%, transparent 60%),
+      radial-gradient(ellipse 60% 40% at 85% 15%, rgba(14,165,233,0.05) 0%, transparent 55%),
+      radial-gradient(ellipse 50% 40% at 50% 80%, rgba(14,165,233,0.04) 0%, transparent 50%);
+  }
+}

@@ -1,0 +1,9 @@
+{
+  "name": "Your Brand",
+  "short_name": "Brand",
+  "start_url": "/",
+  "icons": [],
+  "theme_color": "#0f2420",
+  "background_color": "#0f2420",
+  "display": "standalone"
+}

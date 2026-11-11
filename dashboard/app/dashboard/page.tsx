@@ -19,7 +19,7 @@ export default function DashboardPage() {
         brandName="Feral"
         logo={<Logo size={36} />}
         userName="Vault Owner"
-        userEmail="feral guard"
+        userEmail="policy enforcement layer"
       >
         <DashboardOverview />
       </DashboardLayout>

@@ -82,6 +82,10 @@ Live on NEAR testnet · policy enforced on-chain
             Explore the controls
           </a>
         </div>
+        <p className="hero-fade-4 mt-4 text-xs text-slate-400">
+          Dashboard reads live data from the guard — start it first with{" "}
+          <span className="font-mono text-slate-500">npm run serve</span>
+        </p>
       </div>
 
       <div className="hero-fade-5 absolute bottom-8 sm:bottom-10 left-1/2 -translate-x-1/2 flex flex-col items-center gap-3">

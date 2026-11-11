@@ -6,9 +6,9 @@ import { motion, useInView } from "framer-motion"
 import { ArrowRight } from "lucide-react"
 
 const stats = [
-  { value: "17", label: "checks enforced on-chain on every spend() call" },
+  { value: "20", label: "policy checks enforced on every spend() call (17 on-chain, 3 off-chain)" },
   { value: "52", label: "adversarial scenarios with asserted verdicts" },
-  { value: "37/37", label: "conformance checks against live testnet runs" },
+  { value: "37/37", label: "conformance checks against live testnet contract" },
 ]
 
 export function AboutSection() {

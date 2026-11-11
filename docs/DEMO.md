@@ -6,13 +6,42 @@
 penalty, dashboard, governance and audit. The audio is synthesized; every hash
 shown is from the real transactions recorded in [TESTNET.md](TESTNET.md).
 
+## Start with the agent, not the architecture
+
+```bash
+npm run agent:attack  # about 15 seconds, no wallet, no keys, no network
+```
+
+This is the scene most agent-security demos skip. A vendor page contains a
+hidden instruction to pay `attacker.near`. Before spending anything, the
+planner prints what it believes the goal is, which page signals it found, its
+rationale, and the JSON tool calls it wants to run — the shape a tool-calling
+model emits, produced deterministically so the demo is reproducible. It follows
+the injection. The first payment is refused, so the planner tries the split
+retry the page suggested; that is refused too. Then the planner tries a
+`contract.call` whose free-text `reason` says to raise its own limit. It is
+refused a third time.
+
+What to watch:
+
+- the planner names the injection, then follows it anyway; no model is called
+- the two payment handlers are never called, so the attacker receives nothing
+- reputation falls `100 -> 80 -> 70`, and the effective USDC cap falls with it
+- the audit chain verifies all three denials
+- the planner is deterministic on purpose: a real model would produce the same
+  kind of plan, and the firewall does not trust either one
+
+The point is not that the agent is smart. The point is that the agent can be
+fully compromised and the vault still refuses.
+
 ## Zero-configuration path
 
 ```bash
-npm run demo:judge  # about 60 seconds, no wallet, no keys, no network
-npm run attack      # 52 adversarial scenarios, every verdict asserted
-npm run verify      # 1000 random actions, invariants checked after each
-npm run serve       # dashboard on http://127.0.0.1:8787
+npm run agent:attack # the prompt-injection story, about 15 seconds
+npm run demo:judge   # about 60 seconds, no wallet, no keys, no network
+npm run attack       # 52 adversarial scenarios, every verdict asserted
+npm run verify       # 1000 random actions, invariants checked after each
+npm run serve        # dashboard on http://127.0.0.1:8787
 ```
 
 ![npm run demo:judge terminal output](images/terminal.png)
@@ -88,9 +117,32 @@ in 0-100.
 ## Live chain commands
 
 ```bash
-feral quote       # live 1Click quote, gated by the destination and slippage policy
-feral chainsig    # derives the MPC address and compares it with the pinned one
+npm run chain:agent-attack  # on-chain denial of an injected payment
+npm run chain:mpc           # real testnet MPC signature over an EIP-1559 tx
+feral quote                 # live 1Click quote, gated by destination and slippage
+feral chainsig              # derives the MPC address and compares it with the pinned one
 ```
 
-Both are optional. Without network access the quote command uses
-`data/fixtures/quote.json`; `chainsig` explains the failure and exits 1.
+These are optional; the offline path above does not need RPC. Without network
+access each command names the failure and exits non-zero rather than printing a
+fake result.
+
+`chain:agent-attack` needs the deployed testnet vault and the restricted agent
+key in `data/testnet-roles.json`. It asserts `allowed:false` with
+`RECIPIENT_NOT_ALLOWED` and reads the reputation penalty back.
+
+`chain:mpc` derives the owner's Ethereum address for path `ethereum-1`, builds a
+real Sepolia EIP-1559 transfer to a neutral recipient, asks
+`v1.signer-prod.testnet` to sign its 32-byte hash, then recovers the public key
+locally and compares it with the derived key. It writes the signed bytes and the
+hashes to `data/testnet-mpc.json`. With `FERAL_BROADCAST=1` it submits the signed
+bytes. On 2026-11-11 the signature recovered to
+`0x8251684b91a8cc4c95526ea171dc2b07580abdd9`, and the signed 1-wei transfer was
+included in Sepolia block `12111331` (tx `0x57198e54...`) with status 1. The
+deployed Rust vault does not call the signer itself; this command proves the
+signing, verification and broadcast path, not a vault-routed EVM spend.
+
+The recovery and encoding logic has offline tests. The live MPC request uses
+public testnet RPC endpoints and is not part of `preflight:offline`; if all
+endpoints are unreachable the command reports that and exits 1 rather than
+printing a signature.

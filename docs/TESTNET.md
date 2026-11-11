@@ -42,6 +42,7 @@ or call any other method.
 | Re-register agent | `add_agent(limits)` | `HKwKWEv4oe31vPaQULdJjQ9egw4wDN97Kuy7h7fqh9NU` | [view](https://testnet.nearblocks.io/txns/HKwKWEv4oe31vPaQULdJjQ9egw4wDN97Kuy7h7fqh9NU) |
 | Clean spend after reset | `spend(0.25 NEAR)` | `GmLfRWTrdthrHSBhDcvHCfWLW91HEd6mNUd7EX7a6Grq` | [view](https://testnet.nearblocks.io/txns/GmLfRWTrdthrHSBhDcvHCfWLW91HEd6mNUd7EX7a6Grq) |
 | Denied spend after reset | `spend(1.5 NEAR)` | `B7i3Q1Yx8qA84yTpfpmbyDLYaM3Li5HZwF49JdQRqxtU` | [view](https://testnet.nearblocks.io/txns/B7i3Q1Yx8qA84yTpfpmbyDLYaM3Li5HZwF49JdQRqxtU) |
+| Prompt-injection denial | `spend(25 USDC intent)` | `HGhtZPxANEpus1wiDV9XmxtBHvDtQfoVqxR1PS4CC419` | [view](https://testnet.nearblocks.io/txns/HGhtZPxANEpus1wiDV9XmxtBHvDtQfoVqxR1PS4CC419) |
 
 The denied spend (1.5 NEAR over the 1 NEAR per-tx cap) returned:
 ```json
@@ -64,6 +65,42 @@ its function-call key does not allow. The chain responded:
 Access key does not allow method set_paused
 ```
 
+The latest denial is the live prompt-injection path. The planner read the hidden
+instruction and submitted a 25 USDC payment to `attacker.near`. The vault
+returned `allowed:false`, `reason:"RECIPIENT_NOT_ALLOWED"`; reputation moved
+`90 -> 80`, no funds moved, and the decision hash chain did not advance. The
+transaction is `HGhtZPx...` in the table above.
+
+---
+
+## MPC signature (Sepolia)
+
+`npm run chain:mpc` ran on 2026-11-11 against `v1.signer-prod.testnet`, path
+`ethereum-1`, chain ID `11155111` (Sepolia). It derived:
+
+```
+public key   secp256k1:53wV8KQDLZaWZxMXT8oJpQHuA2mvtAjqg11P6EF8RZzQxVPD4KocojgruC9MqHuyDTybW1NTZmmZ3cseEFKzYJcH
+EVM address  0x8251684b91a8cc4c95526ea171dc2b07580abdd9
+```
+
+The signing hash was
+`0d5df463208c2b57e249bf82680de08007bf7dc2ebd9f3dcf1223b25a25801d5`.
+The MPC returned `r=233c5f0c541bab72...`, `s=46922ba4e6766653...`, `v=1`; the
+local recovery produced the same public key, so the signature was accepted by
+the script. The signed EIP-1559 transfer was 1 wei to the neutral Sepolia burn
+address `0x000000000000000000000000000000000000dEaD`, with hash
+`0x57198e54ffbce12bfbd11ae8fae8c76251be62d2bffa4afdcb4201ffe1725dfc`.
+
+Sepolia included it in block `12111331` with `status: 1`, `gasUsed: 21000` and
+`effectiveGasPrice: 1000000022` wei. The derived address was funded for gas, so
+this is a successful end-to-end EVM transfer, not just a signature. The
+deployed Rust vault still does not call the signer itself.
+
+An earlier 1-wei attempt to the fixture destination
+`0x583ddbf02324f75c3963c45686d52afaf2368c2f` was included at block `12111286`
+but returned `status: 0`; no value moved, so it is not counted as the
+successful spend. The broadcast proof uses the neutral burn address.
+
 ---
 
 ## Policy hash
@@ -84,8 +121,8 @@ Read with `view` calls after the redeploy, the denial, and a conformance run:
 
 ```json
 {
-  "agent_reputation": 90,
-  "effective_per_tx_near": "0.9 NEAR",
+  "agent_reputation": 80,
+  "effective_per_tx_near": "0.8 NEAR",
   "decision_count": 20,
   "last_decision_hash": "93f996e2d07d6ed1df0d2c5d2b8689b49b70ea139328e767bf3729bd0cfc1ff4",
   "vault_breaker_level": 0,
@@ -96,10 +133,11 @@ Read with `view` calls after the redeploy, the denial, and a conformance run:
 The 20 decisions are the accepted spends, the denial probes and the conformance
 run. The conformance run left the agent at reputation 12; `npm run chain:demo`
 then removes and re-adds the agent, which clears its per-agent reputation, usage
-and anomaly state, and re-proves 100 -> 90. That reset is why the live state is
-back at 90 with a 0.9 NEAR effective per-tx limit. The vault's deviation detector
-is live; a fresh transfer well outside the learned baseline is denied
-(`ANOMALY_DEVIATION`). The immutable transactions above are the audit record.
+and anomaly state, and re-proves 100 -> 90. The later on-chain injection denial
+(`HGhtZPx...`) took it from 90 to 80, so the live state is 80 with a 0.8 NEAR
+effective per-tx limit. The vault's deviation detector is live; a fresh transfer
+well outside the learned baseline is denied (`ANOMALY_DEVIATION`). The immutable
+transactions above are the audit record.
 
 ---
 
@@ -141,11 +179,7 @@ re-registers the agent and resets the per-agent state.
 9. The agent's reputation, tier, circuit breaker, and anomaly state are
    readable on-chain.
 10. The vault breaker is at level 0 (normal operation).
-
-## What is not proven
-
-- No third-party audit.
-- TEE attestation is hash-based (proof hash verified against registered hash),
-  not a full TDX/SGX remote attestation report.
-- The off-chain engine is a mirror; only the contract can move funds.
-- No mainnet deployment. This is testnet only.
+11. A prompt-injected payment is denied on-chain (`RECIPIENT_NOT_ALLOWED`),
+    costs reputation, and moves nothing.
+12. The MPC path produces a signature that recovers to the derived key, and a
+    signed 1-wei EVM transfer was included on Sepolia with status 1.

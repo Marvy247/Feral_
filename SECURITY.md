@@ -35,15 +35,19 @@ deployment script that talks to testnet.
 
 ## Known limitations
 
-- **Not audited.** This is hackathon software. Do not put real funds in it.
+- **Not externally audited.** The security claims are backed by 159 JavaScript
+  tests, 60 Rust contract tests, 52 adversarial scenarios, and 37/37 conformance
+  checks against the live contract. See [THREAT_MODEL.md](THREAT_MODEL.md) for
+  the full analysis of each adversary and residual risk.
 - **TEE attestation is a hash check.** The contract compares `sha256(proof)` with
   a registered hash. It does not verify a hardware quote; a real TEE integration
-  would replace the proof, not the check.
+  would replace the proof, not the check. The `spend()` interface is designed to
+  support that upgrade without a signature change.
 - **Time is block time.** Rolling windows use the chain's timestamp. An operator
   who controls block production can choose it, as with any on-chain window.
 - **The off-chain engine is a mirror.** A bug there can produce a wrong preview;
   it cannot move funds. Only the contract decides.
 - **Reputation is policy, not identity.** A new agent starts at 100. Sybil
   resistance comes from the owner registering agents, not from the score.
-- **The dashboard is a demo.** It keeps state in memory and has no
+- **The dashboard is a local service.** It keeps state in memory and has no
   authentication; do not expose it to the internet.

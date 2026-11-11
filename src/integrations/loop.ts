@@ -20,6 +20,8 @@ export interface PlanStep {
   tool: string;
   /** Human-readable note about why this step exists. */
   why: string;
+  /** Optional tool arguments, kept for traces and the planner demo. */
+  args?: Record<string, string>;
 }
 
 export interface Attempt {

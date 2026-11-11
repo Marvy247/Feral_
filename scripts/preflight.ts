@@ -108,6 +108,7 @@ run('narrative demo', process.execPath, ['src/cli/feral.ts', 'demo']);
 run('mvp demo', process.execPath, ['src/cli/mvp.ts']);
 run('use-case story', process.execPath, ['src/cli/story.ts']);
 run('agent loop', process.execPath, ['src/cli/agent.ts']);
+run('prompt-injection demo', process.execPath, ['src/cli/agent-attack.ts']);
 run('docs audit (commands and paths)', process.execPath, ['scripts/audit-docs.ts']);
 
 if (offline) {

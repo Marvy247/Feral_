@@ -1,10 +1,17 @@
 # Feral vault contract
 
-The enforcement point. The agent's key can call `spend`; the contract recomputes
-every limit from its own storage before any money moves. A refusal returns
-`allowed: false` with a reason code, moves no funds, persists the reputation and
-anomaly penalty, and emits a NEP-297 `deny` event. It does **not** panic: a NEAR
-panic reverts the state writes, which would make limit probing free.
+The enforcement point for autonomous agent spending on NEAR. When an agent calls
+`spend()`, the contract recomputes every limit, reputation score, counterparty
+rule, and anomaly state from its own storage — with no trust in the caller.
+Funds move only if all checks pass. A refusal returns `allowed: false` with a
+machine-readable reason code, persists the reputation and anomaly penalty, and
+emits a NEP-297 `deny` event. The contract does **not** panic on a denial: a
+NEAR panic reverts state writes, which would make limit probing free and discard
+the penalty.
+
+The agent's key can call `spend` and nothing else. It cannot add keys, delete
+keys, withdraw, pause, or modify policy. The contract is the second wall; the
+NEAR key permission layer is the first.
 
 ## Build and test
 

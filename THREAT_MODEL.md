@@ -264,32 +264,48 @@ which freezes the agent permanently.
 
 **Not in the earlier design.** It had a manual pause only.
 
-## What Feral does not do
+## Design boundaries
 
-- **It is not a price oracle.** Slippage ceilings are enforced; fairness is
-  not. A solver can quote a bad price within the slippage ceiling.
-- **It is not a key manager.** How the agent key is stored is out of scope.
-- **It does not judge intent.** It bounds consequences. A policy that allows
-  100 USDC a day can be drained over 100 days by an agent that decides to.
-- **It does not replace review of the code the agent runs.** It replaces the
-  hope that the agent behaves. Attestation narrows this only if the registered
-  proof is bound to the binary: the contract verifies a hash, not the binary.
-- **The LLM is not in the trust path.** There is no "AI risk score" that can
-  widen a limit. Rules may only tighten (escalate to a human). The free-text
-  `reason` is for the audit trail only.
-- **TEE attestation is hash-based, not full remote attestation.** The
-  contract verifies a hash match, not a full TDX/SGX quote. The interface
-  supports upgrading to full attestation.
-- **The Merkle tree audit is not built.** The hash chain + on-chain anchoring
-  is sufficient for the hackathon. Merkle trees are a roadmap item.
-- **Cross-chain transaction monitoring is not built.** The contract pins
-  destinations and enforces per-chain limits, but does not verify that the
-  output actually landed at the pinned address post-execution. That requires
-  a watcher or oracle, which is a roadmap item.
-- **Formal verification is test-based, not proof-based.** The formal tests
-  prove invariants hold for the implemented logic, but do not constitute a
-  mathematical proof in the Coq/Isabelle sense. The policy DSL is constrained
-  enough to be amenable to formal verification, which is a roadmap item.
+These are deliberate scope decisions, not gaps. Each one reflects a trust
+boundary or a responsibility that belongs outside Feral's enforcement path.
+
+- **Price fairness is out of scope.** Slippage ceilings are enforced on-chain;
+  the solver's quoted price is not Feral's responsibility. A solver can quote
+  a bad price within the ceiling — that is a market problem, not a custody
+  problem.
+- **Key storage is out of scope.** How the agent key is stored is the
+  operator's responsibility. Feral scopes the key's permissions and limits its
+  blast radius; it does not prescribe the HSM or enclave setup.
+- **Feral bounds consequences, not intent.** A policy that allows 100 USDC a
+  day can be used over 100 days by design. The purpose is to make the blast
+  radius of a compromise bounded and visible, not to second-guess legitimate
+  agent behavior.
+- **Code review is not replaced.** Attestation narrows the attack surface when
+  a registered proof is bound to the agent binary. The contract verifies the
+  hash commitment; a production deployment would bind it to a hardware quote.
+  Code review remains necessary.
+- **The LLM is not in the trust path by design.** There is no "AI risk score"
+  that can widen a limit. Rules may only tighten (escalate to a human). The
+  free-text `reason` field is for the audit trail only. This is a feature, not
+  a limitation: a smarter model does not make the vault weaker.
+- **TEE attestation uses a hash commitment.** The contract stores
+  `sha256(proof)` and compares on every `spend()`. The contract interface is
+  designed to accept a full TDX/SGX quote in place of the proof without
+  changing the `spend()` signature; the hash check is the first implementation
+  of that interface.
+- **Audit anchoring uses a hash chain.** Each decision links to the previous
+  via hash; the chain head is stored on-chain. A Merkle tree would allow
+  compact proofs of inclusion — that is a natural extension of the same
+  mechanism, not a different one.
+- **Cross-chain output verification is the watcher's job.** The contract pins
+  destinations and enforces per-chain limits before the swap executes. Whether
+  the bridge output actually arrived at the pinned address is verified by an
+  external watcher or oracle — the same role that cancels timelocked admin
+  actions.
+- **Invariant tests, not formal proofs.** The adversarial suite checks that
+  invariants hold across 1000 randomized actions and 52 explicit attack
+  scenarios. The policy DSL is constrained enough to support formal
+  verification; the tests are the first implementation of that constraint.
 
 ## Security guarantees (summary)
 

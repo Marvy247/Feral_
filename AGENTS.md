@@ -9,11 +9,12 @@ adds the quote checks the contract cannot see.
 ## Verify it in 60 seconds, without installing anything
 
 ```bash
-npm run test:all     # full suite, no network, no node_modules needed
-npm run attack       # 52 escape attempts, every verdict asserted
-npm run demo:judge   # 10 scenes, zero config, no wallet
-npm run verify       # 1000 random actions, invariants checked after each
-npm run serve        # dashboard on :8787 (also dependency-free)
+npm run test:all      # full suite, no network, no node_modules needed
+npm run agent:attack  # prompt injection -> denied payment, split retry, policy rewrite
+npm run attack        # 52 escape attempts, every verdict asserted
+npm run demo:judge    # 10 scenes, zero config, no wallet
+npm run verify        # 1000 random actions, invariants checked after each
+npm run serve         # dashboard on :8787 (also dependency-free)
 ```
 
 The only npm dependency (`near-api-js`) is a devDependency used by `scripts/`, so
@@ -33,10 +34,16 @@ directly.
 | `src/core/circuit.ts` | four-level breaker state machine |
 | `src/core/money.ts` | exact `bigint` money; `parseAmount` refuses silent rounding |
 | `src/demo/scenarios.ts` | 52-scenario catalogue; single source of truth for CLI, dashboard, tests |
+| `src/demo/prompt-injection.ts` | untrusted vendor page, deterministic planner, injected task through `GatedToolbox` |
+| `src/chain/secp256k1.ts` | dependency-free public-key recovery; verifies MPC signatures |
+| `src/chain/evm.ts` | RLP + EIP-1559 encoding, MPC signature parsing |
+| `src/cli/agent-attack.ts` | `npm run agent:attack`; the injection narrative |
 | `src/cli/feral.ts` | `demo`, `demo:judge`, `attack`, `verify`, `bench`, `serve`, `audit`, `quote`, `chainsig`, `simulate`, `reputation`, `anomaly`, `evaluate` |
 | `src/app/` | dashboard server and page (no build step) |
 | `dashboard/` | Next.js product dashboard; proxies `/api/*` to `feral serve`, holds no policy logic |
 | `contract/res/feral_vault.wasm` | the built contract |
+| `scripts/testnet-agent-attack.ts` | live on-chain denial of an injected payment |
+| `scripts/testnet-mpc-sign.ts` | live MPC signature + local recovery check (no broadcast by default) |
 
 ## Rules that keep the project honest
 

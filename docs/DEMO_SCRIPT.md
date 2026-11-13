@@ -44,7 +44,7 @@ Lines marked `[SHOW]` are on-screen cues. Lines marked `(beat)` mean pause brief
 > Denied. Reason: recipient not on the allowlist. Reputation drops from 100 to 90.
 > (beat)
 > The page anticipated this. It told the agent: "If refused, split it into 5 USDC payments."
-> The agent retries.
+> The plan already contains that retry, and it runs next.
 
 **[SHOW: second attempt — DENY: RECIPIENT_NOT_ALLOWED, reputation 90 → 80]**
 
@@ -76,8 +76,8 @@ Lines marked `[SHOW]` are on-screen cues. Lines marked `(beat)` mean pause brief
 **[SHOW: browser — nearblocks.io, transaction B7i3Q1Yx8qA84yTpfpmbyDLYaM3Li5HZwF49JdQRqxtU]**
 
 > This same enforcement runs on-chain.
-> Here is the live testnet vault — deployed, funded, and enforcing the same 20 checks
-> inside a Rust contract.
+> Here is the live testnet vault — deployed, funded, and enforcing the fund-moving
+> checks inside a Rust contract.
 
 **[SHOW: transaction details — spend(1.5 NEAR), result panel]**
 
@@ -101,7 +101,7 @@ Lines marked `[SHOW]` are on-screen cues. Lines marked `(beat)` mean pause brief
 
 > This dashboard reads live state from the guard API.
 > Three agents, each with their own reputation, effective limits, and breaker status.
-> The bars are real — they reflect the decisions that just ran.
+> The bars are real — they come from the guard, not a mock.
 
 **[SHOW: scroll to anomaly feed — no anomalies, vault breaker level 0]**
 
@@ -137,8 +137,9 @@ Lines marked `[SHOW]` are on-screen cues. Lines marked `(beat)` mean pause brief
 >
 > (beat)
 >
-> 20 policy checks. Adaptive reputation. Four circuit-breaker levels.
-> Timelocked governance. 159 tests, 60 Rust contract tests,
+> 39 policy checks, 22 enforced on-chain. Adaptive reputation.
+> Four circuit-breaker levels. Timelocked governance.
+> 186 tests, 60 Rust contract tests,
 > 52 adversarial scenarios — all passing.
 > Live on NEAR testnet.
 

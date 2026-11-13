@@ -556,7 +556,7 @@ export function DashboardOverview() {
       </div>
 
       <p className="text-xs text-slate-600 leading-relaxed">
-        The Rust vault enforces 17 of the 20 checks on-chain (limits, allow/deny lists,
+        The Rust vault enforces 22 of the 39 checks on-chain (limits, allow/deny lists,
         velocity, destination pinning, reputation floor, breakers); venue allowlisting
         beyond <span className="font-mono">near-intents</span>, slippage and quote expiry
         are enforced by the off-chain engine before <span className="font-mono">spend()</span>.

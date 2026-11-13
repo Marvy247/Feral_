@@ -13,6 +13,7 @@ import { join } from 'node:path';
 import { FeralGuard } from '../core/service.ts';
 import { DEFAULT_PRICES, type ActionRequest } from '../core/engine.ts';
 import { formatAmount } from '../core/money.ts';
+import { sharedBlocklist } from '../core/blocklist.ts';
 
 const root = join(import.meta.dirname, '..', '..');
 const policyText = readFileSync(join(root, 'examples', 'policy.yaml'), 'utf8');
@@ -271,6 +272,35 @@ const server = createServer(async (req, res) => {
       guard.thaw(typeof payload.actor === 'string' ? payload.actor : undefined);
       return json(res, 200, { ok: true, breaker: guard.getCircuitBreakerLevel() });
     }
+
+    // ── Shared blocklist ───────────────────────────────────────────────────
+    // GET  /api/blocklist/:address   — query the standing of an address
+    // GET  /api/blocklist            — list all flagged addresses
+    // POST /api/blocklist/report     — file a report with evidence
+    if (method === 'GET' && path === '/api/blocklist') {
+      return json(res, 200, { flagged: sharedBlocklist.flagged(), total: sharedBlocklist.size() });
+    }
+
+    if (method === 'GET' && path.startsWith('/api/blocklist/')) {
+      const address = decodeURIComponent(path.slice('/api/blocklist/'.length));
+      if (!address) return fail(res, 400, 'address is required');
+      return json(res, 200, sharedBlocklist.query(address));
+    }
+
+    if (method === 'POST' && path === '/api/blocklist/report') {
+      const payload = await body(req);
+      if (typeof payload.address !== 'string') return fail(res, 400, 'body.address is required');
+      if (typeof payload.reporter !== 'string') return fail(res, 400, 'body.reporter is required');
+      if (typeof payload.reason !== 'string') return fail(res, 400, 'body.reason is required');
+      const rpt = sharedBlocklist.report(
+        payload.address,
+        payload.reporter,
+        payload.reason,
+        typeof payload.evidence === 'string' ? payload.evidence : '',
+      );
+      return json(res, 200, { ok: true, report: rpt, current: sharedBlocklist.query(payload.address) });
+    }
+    // ── end shared blocklist ───────────────────────────────────────────────
 
     fail(res, 404, `no route for ${method} ${path}`);
   } catch (err) {

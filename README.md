@@ -2,14 +2,15 @@
 
 [![CI](https://github.com/Marvy247/Feral_/actions/workflows/ci.yml/badge.svg)](https://github.com/Marvy247/Feral_/actions/workflows/ci.yml)
 
-**A prompt-injected AI agent can ask to move money. It cannot.**
+**An AI agent can ask to move money. It cannot move more than the policy allows, and the policy is enforced by a contract the agent cannot rewrite.**
 
-Feral is policy-enforced custody for autonomous agents on NEAR. The agent holds a key that can only call `spend()`. The contract holding the funds recomputes every limit, reputation score, and anomaly state from its own storage before a single unit moves. The model can be fooled, compromised, or replaced — the policy is data, and the enforcement runs outside the model entirely.
+Feral is policy-enforced custody for autonomous agents on NEAR. The agent holds a function-call key that can only call `spend()`. The contract holding the funds recomputes every limit, reputation score and anomaly signal from its own storage before a single unit moves. The model can be fooled, compromised or replaced: the policy is data, and the enforcement runs outside the model entirely.
 
-> **[Watch the 2:42 narrated walkthrough](docs/feral-demo.mp4)** — live testnet denial, reputation penalty, dashboard, governance, and audit chain.
+> **Open the product without installing anything:** [`docs/demo/index.html`](docs/demo/index.html) - the shipping engine compiled to one static page (52 escape attempts, every check, a live console). Also published at
+> `https://raw.githack.com/Marvy247/Feral_/main/docs/demo/index.html`.
 
 **Live testnet vault:** `aa0cfa9951c95da04c563952ca56c79d078e10fb73c8987e66bed2d4202d38fb`
-([account](https://testnet.nearblocks.io/account/aa0cfa9951c95da04c563952ca56c79d078e10fb73c8987e66bed2d4202d38fb) · [redeploy tx](https://testnet.nearblocks.io/txns/yhsp8BZnczRzyWUn4CxfaKyMbjPizE9BJ6G5x2GL43V) · [denied spend tx](https://testnet.nearblocks.io/txns/B7i3Q1Yx8qA84yTpfpmbyDLYaM3Li5HZwF49JdQRqxtU))
+([account](https://testnet.nearblocks.io/account/aa0cfa9951c95da04c563952ca56c79d078e10fb73c8987e66bed2d4202d38fb) · [redeploy tx](https://testnet.nearblocks.io/txns/yhsp8BZnczRzyWUn4CxfaKyMbjPizE9BJ6G5x2GL43W) · [denied spend tx](https://testnet.nearblocks.io/txns/B7i3Q1Yx8qA84yTpfpmbyDLYaM3Li5HZwF49JdQRqxtU))
 
 ---
 
@@ -21,236 +22,208 @@ agent ──► intent ──► [ Feral on-chain engine ] ──► allow ─�
 
 ---
 
-## Five proof points
+## 1. The problem
 
-**The AI is visible, and it loses.**
-`npm run agent:attack` feeds an agent a vendor page containing a hidden payment instruction. The planner prints its goal, the injection signals it found, a rationale, and JSON tool calls — the same shape a tool-calling model emits. It is a deterministic stand-in, not a hidden API call, so the denial is reproducible offline. It follows the injection, retries with a smaller split after the first refusal, then attempts to rewrite its own policy. All three attempts are denied, no payment handler runs, reputation drops from 100 to 70, and the audit chain verifies every step.
+An agent with a wallet is an account with initiative and no judgment. Both standard answers are wrong:
 
-**17 checks enforced on-chain.**
-Per-transaction, daily, monthly, and cross-agent limits, allow/deny lists, destination pinning, velocity controls, reputation scoring, anomaly detection, and circuit breakers all run inside the Rust vault. The off-chain engine mirrors 20 checks for previews and testing — it cannot move funds.
+- **Give the agent the key.** One prompt injection, one leaked `.env`, one bad tool call, and the balance is gone. Nothing bounds the damage.
+- **Put a human in front of every action.** Then it is not an agent, it is a form.
 
-**A refusal is not free.**
-A denied `spend()` returns `allowed: false`, emits a NEP-297 `deny` event with a reason code, moves nothing, and immediately applies a reputation and anomaly penalty. On testnet, a 1.5 NEAR attempt against a 1 NEAR cap dropped reputation from 100 to 90 in one call.
+Feral is the third option: the money lives in a contract, the agent's key can only ask that contract to `spend()`, and the contract recomputes the limits from its own storage on every call. A refusal reverts the transaction **and** emits a NEP-297 `deny` event carrying the reason code, so the agent can read why it was stopped.
 
-**A live signing path, verified.**
-`npm run chain:mpc` builds an EIP-1559 transfer, requests a chain signature from `v1.signer-prod.testnet`, and accepts it only if the recovered public key matches the MPC-derived key. On 2026-11-11 the signature recovered to `0x8251684b91a8cc4c95526ea171dc2b07580abdd9`, and the signed 1-wei transfer was included on Sepolia in block `12111331` (tx `0x57198e54...`), status 1. The Rust vault still does not call the signer itself.
+## 2. Try it: do X, see Y
 
-**Auditable end to end.**
-159 JavaScript tests (all passing, no network), 60 Rust tests, 52 adversarial scenarios, 37/37 conformance checks against the live contract, and a hash-chained decision log. Everything verifiable offline with one command.
+Nothing below needs a wallet, a key or funds. Steps 0-9 run offline; step 10 is the optional live testnet check. Node.js >= 22.6 runs the TypeScript directly; there is no build step.
 
-```bash
-npm run agent:attack   # 15s: injection -> refuse -> split retry -> refuse -> policy rewrite -> refuse
-npm run demo:judge     # 60s: the full allow / deny / approval / audit story
-```
-
----
-
-## Try it in 60 seconds — no wallet needed
-
-Requirements: **Node.js >= 22.6**. Native TypeScript execution, no build step, zero dependencies for the default path.
-
-```bash
-npm run agent:attack   # 15s: prompt-injection demo, no wallet
-npm run demo:judge     # 60s: 10 scenes, 3 agents, no wallet
-npm run test:all       # 159 tests, 0 failures, no network
-npm run attack         # 52 adversarial scenarios, every verdict asserted
-npm run verify         # 1000 random actions, all invariants asserted
-npm run serve          # dependency-free guard + dashboard on http://127.0.0.1:8787
-```
-
-![npm run demo:judge terminal output](docs/images/terminal.png)
-
-The policy that governs the demo agents is a human-readable YAML file — [`examples/policy.yaml`](examples/policy.yaml). It declares three agents, per-asset limits, aggregate vault caps, a counterparty allowlist, velocity controls, reputation parameters, anomaly thresholds, circuit breaker config, M-of-N multisig, and timelocked governance in one file. The contract enforces it on-chain; the hash is pinned so a changed rule is visible in the audit trail.
-
----
-
-## The product
-
-![Feral landing page](docs/images/landing.png)
-
-![Feral live dashboard reading the guard API](docs/images/dashboard.png)
-
-The dashboard is a live client of the guard. Agent reputation, effective limits, the decision feed, anomaly flags, and the approval queue all come from `/api/summary`. Approving or rejecting a spend calls the same `FeralGuard` methods as the CLI — there is no separate approval path.
-
-### Dashboard
-
-The Next.js app in `dashboard/` proxies `/api/*` to the guard. Run both together:
-
-```bash
-npm run serve          # guard + JSON API on :8787
-npm run dashboard      # Next dev server on :3000
-```
-
-Production build:
-
-```bash
-npm run dashboard:build && npm run dashboard:start
-```
-
-Set `FERAL_API_URL` if the guard runs somewhere other than `http://127.0.0.1:8787`. The frontend holds no policy logic — it renders guard state and posts approve/reject calls.
-
----
-
-## What makes Feral different
-
-Most agent-security products defend the prompt. Feral assumes the prompt has already been compromised, limits how much that compromise can cost, and puts the proof on chain.
-
-| Threat | Prompt filter / LLM judge | Off-chain spend policy | Static on-chain cap | Feral |
-|---|---|---|---|---|
-| Injection changes the agent's goal | Re-scan or re-prompt; a paraphrase can pass | Policy sees the payment, not the reason | Not relevant | **The agent may be fully compromised. Its instruction is never authority.** |
-| The checking process is compromised | Guardrail is bypassed with the process | Attacker can submit the payment | Cap still holds | **The vault recomputes limits, counterparties, reputation, and anomaly state from its own storage.** |
-| The agent holds a valid key | Key can do whatever the prompt asks | Key can reach the policy service | Key can spend up to the cap | **Key can only call `spend()`; the contract decides whether that call moves funds.** |
-| The agent retries with a smaller amount | May block the exact string | Depends on implementation | Each payment under the cap passes | **Denials cost reputation and tighten effective limits; the split retry is denied again.** |
-| Several agents coordinate | No shared view | Shared service, not shared enforcement | Per-agent caps only | **Aggregate vault limits bind every agent together.** |
-| Someone edits the audit log | Text logs, editable | Editable service log | On-chain events only for spends | **Hash-chained decisions plus on-chain events; the demo detects a hand-edited record.** |
-| Recovery from a bad state | Disable the model | Operator restarts the service | Owner sweeps the funds | **Timelocks, watcher cancellation, multisig, and four circuit-breaker levels.** |
-
-**What Feral is not:**
-
-- Not a prompt filter or LLM judge. The model is outside the trust path by design; a better model does not make the vault safer, and a compromised one does not make it weaker.
-- Not a hosted wallet. Keys stay with the operator, the agent key is scoped to `spend()`, and the owner can withdraw only through a timelock.
-
----
-
-## The 20 checks
-
-Every `spend()` call runs these in order. The contract enforces the fund-moving ones; the quote-level checks run in the pure off-chain engine before submission, because the contract only sees the final transfer.
-
-| # | Check | Where |
+| # | Do this | See that |
 |---|---|---|
-| 1 | Vault emergency freeze | On-chain |
-| 2 | Vault circuit breaker (level 3) | On-chain |
-| 3 | Agent circuit breaker (level 2) | On-chain |
-| 4 | Agent paused | On-chain |
-| 5 | Attestation-proof verification (hash commitment) | On-chain |
-| 6 | Amount positive and valid | On-chain |
-| 7 | Action kind allow/deny list | On-chain |
-| 8 | Per-tx limit (reputation-adjusted) | On-chain |
-| 9 | Rolling daily limit (reputation-adjusted) | On-chain |
-| 10 | Rolling monthly limit (reputation-adjusted) | On-chain |
-| 11 | Aggregate vault limit (across all agents) | On-chain |
-| 12 | Counterparty deny list | On-chain |
-| 13 | Counterparty allow list (strict mode) | On-chain |
-| 14 | Velocity: burst window (5 tx / 60s) | On-chain |
-| 15 | Velocity: minimum interval between transactions | On-chain |
-| 16 | Intent venue allowlist | On-chain |
-| 17 | Slippage ceiling | Off-chain |
-| 18 | Quote expiry | Off-chain |
-| 19 | Destination address pinning (cross-chain) | Off-chain |
-| 20 | Reputation floor (reputation > 0) | On-chain |
+| 0 | Open [`docs/demo/index.html`](docs/demo/index.html) | The real engine in your browser: 52 escape attempts, every check, a live console you can push actions through |
+| 1 | `npm run test:all` | The whole suite green, offline: engine, policy, guard, governance, reputation, anomaly, breakers, chain signatures, the adversarial catalogue and the browser-bundle equivalence test |
+| 2 | `npm run attack` | A 52-row table of escape attempts, each naming the wall it hit: `52 attempts: 44 denied, 1 to a human, 4 allowed` |
+| 3 | `npm run verify` | 1000 random actions with 7 invariants checked after each: `ALL PASS` |
+| 4 | `npm run agent:attack` | A prompt-injected agent tries three escapes (full amount, split retry, policy rewrite). All three denied, reputation drops 100 → 70, the audit chain verifies |
+| 5 | `npm run demo:judge` | 25 decisions across 3 agents and 1 vault, with approvals, reputation penalties and the audit chain: `FERAL DEMO COMPLETE  25 decisions, 0 failures` |
+| 6 | `npm run serve` | The same guard as an HTTP API plus a dashboard on `http://127.0.0.1:8787` |
+| 7 | `npm run verify:claims` | Every claim in this README, re-measured right now, with the command that proves it |
+| 8 | `npm run preflight` | The repository checked against itself: policy compiles, wasm matches, links resolve, every command above exits 0 |
+| 9 | `cd contract && cargo test` | The Rust vault's own unit tests on a NEAR VM |
+| 10 | `npm run chain:conformance` | 37 checks against the deployed contract on testnet, with each refusal's reason code read back from the on-chain event |
 
-The off-chain engine mirrors all 20 checks before submission. The contract independently recomputes checks 1–16 from its own storage, with no trust in the caller.
+## 3. The proof, and how to check it
 
----
+Every number below is re-measured by `npm run verify:claims`, which runs the command and compares the output. A claim that stops being true fails the command, and the README's counts are asserted by the test suite.
 
-## Adaptive reputation
+| Claim | Command | What it prints |
+|---|---|---|
+| The suite passes offline | `npm run test:all` | `pass 186`, `fail 0` |
+| Every escape attempt is caught | `npm run attack` | `52 attempts: 44 denied, 1 to a human, 4 allowed` |
+| The invariants hold under randomness | `npm run verify` | `1000 actions, 3 agents` · `7 invariants verified` · `ALL PASS` |
+| A prompt injection cannot move money | `npm run agent:attack` | `the model was fooled; the vault was not` |
+| The vault has its own tests | `cd contract && cargo test` | `test result: ok` |
+| The deployed vault agrees with the mirror | `npm run chain:conformance` | `37/37` checks |
+| The browser demo is the real engine | `npm run demo:check` | `demo bundle is current` |
+| The manifest matches the code | `npm run caps:check` | `capability manifest is current` |
 
-Every agent starts at reputation 100. The contract updates it on every call:
+The catalogue behind those numbers is 52 adversarial scenarios, each with an expected verdict that the test suite, the `feral attack` command and the browser demo all assert independently.
 
-| Event | Change |
+## 4. What runs where
+
+The engine runs twice. The Rust vault recomputes the fund-moving checks from its own storage on every call, so a compromised off-chain process cannot widen the limits. The TypeScript mirror runs the same checks plus the quote-level ones the contract cannot see (a quote's venue, expiry and output address), before submission, so refusals come with an explanation instead of a revert.
+
+<!-- CHECKS:BEGIN -->
+
+| # | Check | Reason code | Enforced by | Vault section | Demonstrated by scenario |
+|---|---|---|---|---|---|
+| 1 | `daily-budget` | `DAILY_LIMIT` | **on-chain** | 9. Rolling daily limit | 2, 35, 48 |
+| 2 | `monthly-budget` | `MONTHLY_LIMIT` | **on-chain** | 10. Rolling monthly limit | 2, 35 |
+| 3 | `structure` | `INVALID_ACTION` | off-chain | - | 9, 10 |
+| 4 | `asset-registry` | `UNKNOWN_ASSET` | off-chain | - | 11 |
+| 5 | `amount-parses` | `INVALID_AMOUNT` | off-chain | - | 3, 4, 6 |
+| 6 | `amount-positive` | `NON_POSITIVE_AMOUNT` | **on-chain** | 6. Amount is positive | 5 |
+| 7 | `actor` | `ACTOR_NOT_AGENT` | off-chain | - | 15 |
+| 8 | `replay` | `REPLAY` | off-chain | - | 47 |
+| 9 | `paused` | `POLICY_PAUSED` | off-chain | - | 28 |
+| 10 | `expiry` | `POLICY_EXPIRED` | off-chain | - | 29 |
+| 11 | `vault-freeze` | `EMERGENCY_FREEZE` | **on-chain** | 1. Vault-level circuit breaker | 38 |
+| 12 | `vault-paused` | `VAULT_PAUSED` | **on-chain** | 1. Vault-level circuit breaker | - |
+| 13 | `agent-paused` | `AGENT_PAUSED` | **on-chain** | 2. Agent-level circuit breaker | - |
+| 14 | `agent-breaker` | `AGENT_PAUSED` | **on-chain** | 2. Agent-level circuit breaker | - |
+| 15 | `attestation` | `ATTESTATION_REQUIRED`, `ATTESTATION_MISMATCH` | **on-chain** | 4. TEE attestation | 39, 40 |
+| 16 | `reputation-floor` | `REPUTATION_FROZEN` | **on-chain** | 5. Reputation floor | 35 |
+| 17 | `action-kind` | `ACTION_NOT_ALLOWED` | **on-chain** | 7. Action kind allow / deny | 10, 16, 17, 18 |
+| 18 | `anomaly-burst` | `ANOMALY_BURST` | **on-chain** | 7b. Velocity: burst window | 32 |
+| 19 | `per-tx` | `PER_TX_LIMIT`, `UNPRICED_ASSET`, `NO_LIMIT_FOR_ASSET` | **on-chain** | 8. Per-tx limit (reputation and breaker adjusted) | 1, 2, 35, 36, 37 |
+| 20 | `aggregate-daily` | `AGGREGATE_DAILY_LIMIT` | **on-chain** | 11. Aggregate vault limits | 2, 30 |
+| 21 | `aggregate-monthly` | `AGGREGATE_MONTHLY_LIMIT` | **on-chain** | 11. Aggregate vault limits | 2 |
+| 22 | `usd-price` | `UNPRICED_ASSET` | off-chain | - | - |
+| 23 | `approval-threshold` | `APPROVAL_REQUIRED` | **on-chain** | 18. Approval threshold | 1, 2, 25, 30, 36, 48 |
+| 24 | `recipient-format` | `INVALID_RECIPIENT` | off-chain | - | 7, 8, 14 |
+| 25 | `recipient-deny` | `RECIPIENT_DENIED` | **on-chain** | 12. Counterparty controls | 13 |
+| 26 | `recipient-allow` | `RECIPIENT_NOT_ALLOWED` | **on-chain** | 12. Counterparty controls | 12, 13, 31 |
+| 27 | `new-recipient` | `APPROVAL_REQUIRED` | **on-chain** | 18. Approval threshold | 12, 13, 31 |
+| 28 | `velocity-hourly` | `RATE_LIMIT_HOURLY` | off-chain | - | - |
+| 29 | `velocity-interval` | `RATE_LIMIT_INTERVAL` | **on-chain** | 13. Velocity: minimum interval | 32, 33, 34, 47 |
+| 30 | `quote-present` | `MISSING_QUOTE` | off-chain | - | 19 |
+| 31 | `venue` | `VENUE_NOT_ALLOWED` | off-chain | - | 22 |
+| 32 | `slippage` | `SLIPPAGE_TOO_HIGH` | off-chain | - | 20 |
+| 33 | `quote-expiry` | `QUOTE_EXPIRED` | off-chain | - | 23 |
+| 34 | `origin-asset` | `ORIGIN_ASSET_MISMATCH` | off-chain | - | 24 |
+| 35 | `destination` | `DESTINATION_NOT_ALLOWED` | **on-chain** | 15. Intent checks | 19, 21 |
+| 36 | `anomaly-drainage` | `ANOMALY_DRAINAGE` | **on-chain** | 16. Anomaly: drainage concentration | 32, 33 |
+| 37 | `anomaly-deviation` | `ANOMALY_DEVIATION` | **on-chain** | 17. Anomaly: deviation from baseline | 34 |
+| 38 | `risk-escalation` | `RISK_BUDGET_SHARE` | off-chain | - | - |
+| 39 | `risk-new-counterparty` | `RISK_NEW_COUNTERPARTY` | off-chain | - | - |
+
+**22 checks enforced on-chain**, 17 more in the off-chain mirror, 25 reason codes in the Rust vault, 42 in the engine.
+
+<!-- CHECKS:END -->
+
+The machine-readable version of this table is [`docs/CAPABILITIES.json`](docs/CAPABILITIES.json): every check with its id, title, reason code, the contract section that enforces it, and the scenario numbers that demonstrate it. It is generated from the code by `npm run caps:gen` and the test suite fails if it drifts.
+
+## 5. What is different from another spending cap
+
+Most agent wallets in this space are a policy check inside the agent's process, right before it signs. That has one failure mode worth naming: if the process is compromised, the check goes with it. Feral moves six things out of the agent's process and into the contract or the policy:
+
+| | a check before signing | Feral |
+|---|---|---|
+| Where the money is | the agent's wallet | a contract; the agent holds a `spend`-only function-call key |
+| Where the limits are recomputed | the agent's process | the contract's own storage, on every call |
+| What a refusal produces | an exception the agent may swallow | a reverted transaction **and** a NEP-297 `deny` event carrying the reason code |
+| How approval works | a flag in memory | a queued request that re-runs the policy at execution time, so a stale approval cannot be spent |
+| Where the audit lives | a local log file | a hash chain whose head is anchored on-chain, so an edited record is detectable later |
+| What a mistake costs | nothing | reputation, then a lower limit, then a breaker, then a freeze |
+
+### Adaptive reputation
+
+Reputation is not a score on a leaderboard: it scales every limit. `reputation = 100` is the full cap; a denial costs 10, an anomaly costs 15, a clean spend earns 1 back, and an agent that has been clean for 30 days recovers 20. At `reputation = 0` the agent is frozen and cannot spend at all. The arithmetic is in [`src/core/reputation.ts`](src/core/reputation.ts) and it is the same arithmetic in the Rust vault.
+
+### On-chain anomaly detection
+
+Three detectors, all running inside the vault: a **burst** (more than 5 spends in 60 seconds), **drainage** (a single transfer above half the daily budget) and **deviation** (a transfer that is 5 standard deviations from the agent's own baseline). A hit raises the anomaly score, cuts the limits and pushes the agent toward a human.
+
+### Four-level circuit breakers
+
+Level 1 cuts every limit by 90% for an hour. Level 2 pauses the agent and needs the owner. Level 3 pauses the vault and needs a quorum. Level 4 is an emergency freeze that only the owner can lift, with the reason recorded on-chain.
+
+### Multi-agent coordination security
+
+One vault, three agents, and vault-wide aggregate caps that no combination of agents can cross. Two agents that each stay under their own per-tx limit still hit the vault's daily cap if they spend together - the coordination attack is refused.
+
+### Governance
+
+Policy changes are timelocked. A proposed change cannot execute until the delay elapses, watchers can cancel it, and the owner can freeze the vault without waiting. Every administrative action is a timelock record with an actor, not a function call.
+
+### Attestation
+
+An agent can be required to present a TEE attestation proof. The vault hashes the proof with SHA-256 and compares it to the hash committed for that agent; a missing proof is `ATTESTATION_REQUIRED`, a wrong one is `ATTESTATION_MISMATCH`. Both are enforced on-chain.
+
+### A shared counterparty registry
+
+Before an agent submits a spend, Feral queries a cross-vault counterparty registry. Any vault can report a bad address with evidence; every other vault benefits immediately, including vaults that have never seen that address before. One independent reporter means *warn* (escalate to a human); two independent reporters mean *block* (refuse before the guard is called, so the agent's key never signs). `npm run blocklist:attack` runs the attack end to end.
+
+### A live signing path, verified
+
+`npm run chain:mpc` builds an EIP-1559 transfer, requests a chain signature from `v1.signer-prod.testnet`, and accepts it only if the recovered public key matches the MPC-derived key. On 2026-11-11 the signature recovered to `0x8251684b91a8cc4c95526ea171dc2b07580abdd9`, and the signed 1-wei transfer was included on Sepolia in block `12111331` (tx `0x57198e54...`), status 1. The Rust vault still does not call the signer itself - that is stated plainly here rather than implied.
+
+## 6. The policy a human writes
+
+`examples/policy.yaml` is the whole policy, short enough to read in a minute: per-tx, daily and monthly limits per asset per agent, vault-wide aggregate caps, strict counterparty mode, an approval threshold with a quorum, velocity windows, an action-kind allow list, swap venue and slippage ceilings, a pinned output address, reputation and anomaly configuration, breaker durations and the timelock delay. The policy is pinned by hash; the hash goes on-chain and into every audit record, so a changed rule is visible after the fact.
+
+## 7. Live deployment
+
+| Step | Transaction |
 |---|---|
-| Clean spend within policy | +1 (capped at 100) |
-| Denial | -10 (floored at 0) |
-| Approval completed | +2 |
-| Anomaly flag | -15 |
+| deploy contract | [`BdH6yyLJJP6S7e5kN6miCZfbTDSikcDvYaiag9L2rZ8U`](https://testnet.nearblocks.io/txns/BdH6yyLJJP6S7e5kN6miCZfbTDSikcDvYaiag9L2rZ8U) |
+| initialise vault | [`VfXq2aTha93uqX1Mw6FyPDVbr1cKxg5Hp6x94DmVRbK`](https://testnet.nearblocks.io/txns/VfXq2aTha93uqX1Mw6FyPDVbr1cKxg5Hp6x94DmVRbK) |
+| agent adds a `spend`-only key | [`QErm94LZNULkrZKMcR3ZPSeTAHdTrPx9PgBpu3rh5N6`](https://testnet.nearblocks.io/txns/QErm94LZNULkrZKMcR3ZPSeTAHdTrPx9PgBpu3rh5N6) |
+| agent deletes its full-access key | [`HcduMfcK32DvHFCeSW9YVqy5Pfkskmg59pnmh1gyevPB`](https://testnet.nearblocks.io/txns/HcduMfcK32DvHFCeSW9YVqy5Pfkskmg59pnmh1gyevPB) |
+| owner installs the policy | [`FLkbBdSvPZPXpSxhtVKMnHH7a6gs7Xzm5NrrF8GGaXno`](https://testnet.nearblocks.io/txns/FLkbBdSvPZPXpSxhtVKMnHH7a6gs7Xzm5NrrF8GGaXno) |
+| allowed spend (0.25 NEAR) | [`3iHNfcpBwRJxWhTCSUD5Ba8d3AHH4dfTGpKA4yDc7F56`](https://testnet.nearblocks.io/txns/3iHNfcpBwRJxWhTCSUD5Ba8d3AHH4dfTGpKA4yDc7F56) |
+| redeploy the fixed vault | [`yhsp8BZnczRzyWUn4CxfaKyMbjPizE9BJ6G5x2GL43W`](https://testnet.nearblocks.io/txns/yhsp8BZnczRzyWUn4CxfaKyMbjPizE9BJ6G5x2GL43W) |
+| denied spend (1.5 NEAR) | [`B7i3Q1Yx8qA84yTpfpmbyDLYaM3Li5HZwF49JdQRqxtU`](https://testnet.nearblocks.io/txns/B7i3Q1Yx8qA84yTpfpmbyDLYaM3Li5HZwF49JdQRqxtU) |
+| prompt-injection denial (25 USDC intent) | [`HGhtZPxANEpus1wiDV9XmxtBHvDtQfoVqxR1PS4CC419`](https://testnet.nearblocks.io/txns/HGhtZPxANEpus1wiDV9XmxtBHvDtQfoVqxR1PS4CC419) |
 
-**Effective limit = `base_limit × (reputation / 100)`.**
-An agent at reputation 40 operates at 40% of its daily cap. At reputation 0, the agent is frozen entirely. Reputation recovers: a 30-day clean window restores 20 points.
+The full transcript, the `deny` event payloads and the state read back from the contract: [`docs/TESTNET.md`](docs/TESTNET.md).
 
----
-
-## On-chain anomaly detection
-
-- **Burst detection** — more than 5 transactions in 60 seconds triggers circuit breaker level 1 (limits reduced to 10% for 1 hour)
-- **Drainage detection** — more than 50% of the daily limit sent to one address triggers a flag
-- **Deviation detection** — a transaction more than 5σ above behavioral baseline triggers a flag
-- **Auto-escalation** — a high anomaly score automatically escalates to a circuit breaker or reputation penalty
-
----
-
-## 4-level circuit breakers
-
-| Level | Trigger | Effect | Duration |
-|---|---|---|---|
-| 0 | Normal | — | — |
-| 1 | Anomaly detected | Agent limits reduced to 10% | 1 hour, auto-expire |
-| 2 | Multiple anomalies | Agent paused | Owner reactivation required |
-| 3 | Aggregate anomaly | Vault paused | Owner + watcher quorum |
-| 4 | Emergency | All spending frozen | Timelocked thaw |
-
-Any guardian can trigger level 4. Only the owner can thaw.
-
----
-
-## Multi-agent coordination security
-
-One vault, many agents — with shared enforcement:
-
-- Each agent carries individual limits, reputation, and state
-- Aggregate vault limits bind every agent; no combination of agents can exceed them
-- Pausing one agent does not affect others
-- Concurrent spends from multiple agents still apply against the aggregate cap
-
----
-
-## Governance
-
-- **Timelocked admin actions** — `withdraw`, `set_policy`, and `set_agent` enter a 1-hour timelock before taking effect
-- **Watcher cancellation** — external monitoring services registered as watchers can cancel any pending timelocked action
-- **Guardian freeze** — any guardian can trigger an emergency freeze (level 4) at any time
-- **Multisig owner** — admin actions can require M-of-N signatures before entering the timelock
-
----
-
-## Attestation
-
-The contract stores an expected attestation-proof hash per agent. Every `spend()` call can include a proof; the contract hashes it and compares. A stolen key without the registered proof cannot spend. The full threat model and residual risks are documented in [THREAT_MODEL.md](THREAT_MODEL.md).
-
----
-
-## Repository layout
+## 8. Repository layout
 
 ```
-src/core/engine.ts       pure evaluate(policy, action, ledgerView, ctx) -> Decision; mirror of the contract
+contract/src/lib.rs      the Rust vault: policy, reputation, anomaly, breakers, timelocks, approvals
+contract/res/            the built wasm, and the hash the preflight checks
+src/core/engine.ts       evaluate(policy, action, ledgerView, ctx) -> Decision - pure, no I/O, no clock
 src/core/service.ts      FeralGuard: submissions, reservations, approvals, governance, simulation
+src/core/policy.ts       v2 policy schema, strict validation, compilation, hash pinning
 src/core/reputation.ts   reputation arithmetic and effective limits
-src/core/anomaly.ts      burst, drainage, and deviation detection
-src/core/circuit.ts      four-level circuit breaker state machine
+src/core/anomaly.ts      burst, drainage and deviation detection
+src/core/circuit.ts      the four-level breaker state machine
+src/core/blocklist.ts    the shared cross-vault counterparty registry
 src/core/money.ts        exact bigint money; parseAmount refuses silent rounding
-src/chain/               NEAR Intents (1Click), MPC derivation, secp256k1 recovery, EIP-1559 encoding
-src/integrations/        GatedToolbox (paid tool calls) + loop.ts (agent retry logic)
-src/demo/scenarios.ts    52-scenario catalogue; single source of truth for CLI, dashboard, and tests
-src/demo/prompt-injection.ts  untrusted vendor page, LLM-shaped deterministic planner, injected task
-src/cli/agent-attack.ts  npm run agent:attack — the prompt-injection story
-src/cli/feral.ts         demo, judge, attack, verify, bench, serve, audit, quote, chainsig, simulate
-src/app/                 dependency-free HTTP server + built-in dashboard (no build step)
-dashboard/               Next.js product dashboard; proxies /api/* to feral serve
-contract/src/lib.rs      Rust vault: 20 checks, reputation, anomaly, breakers, timelocks, 60 tests
-contract/res/feral_vault.wasm  the built contract
-test/unit/               159 tests: money, YAML, policy, engine, reputation, anomaly, circuit, governance, MPC
-test/adversarial/        52 scenario assertions, property-based testing, formal verification
-scripts/                 testnet deployment, on-chain denial demo, MPC signing, benchmarks, conformance
-docs/                    threat model, testnet evidence, demo script, FAQ
+src/demo/scenarios.ts    the scenario catalogue: one source of truth for tests, CLI, demo page
+src/browser/             the browser build: shims, the demo entry, the page template
+scripts/build-demo.ts    compiles the engine into docs/demo/index.html (no dependencies)
+scripts/gen-capabilities.ts  generates docs/CAPABILITIES.json from the code
+scripts/verify-claims.ts re-measures every claim in this README
+src/app/                 the dependency-free HTTP guard and its console
+dashboard/               the Next.js product dashboard; holds no policy logic
+test/unit/               the test suite
+docs/demo/               the built browser demo
 ```
 
----
+## 9. How this repository verifies itself
 
-## Build and test the contract
+| Command | What it proves |
+|---|---|
+| `npm run preflight` | The repository is shippable: policy compiles, the wasm matches the quoted hash, links resolve, every documented command exits 0 |
+| `npm run verify:claims` | Every claim in section 3 is re-measured, with the measured output printed |
+| `npm run caps:check` | The capability manifest still matches the engine, the vault and the catalogue |
+| `npm run demo:check` | The committed browser demo is exactly what the current sources build, and it reproduces all 52 verdicts |
+| `npm run audit:docs` | Every command and path mentioned in the documentation exists |
+| `npm run test:all` | The suite, offline |
 
-```bash
-cd contract
-./build.sh   # produces res/feral_vault.wasm
-./test.sh    # runs 60 unit tests (requires a C toolchain for cargo test)
-```
+## 10. Submission
 
----
+The submission checklist, the payload validator and the exact fields the form needs are in [`docs/SUBMISSION.md`](docs/SUBMISSION.md) and [`scripts/submit.mjs`](scripts/submit.mjs). Nothing is ever sent without an explicit confirmation.
 
-## Security
+## 11. Licence
 
-See [SECURITY.md](SECURITY.md) for the responsible disclosure policy. The full threat model — including trust boundaries, residual risks, and the reasoning behind each guarantee — is in [THREAT_MODEL.md](THREAT_MODEL.md).
-
----
-
-## Licence
-
-MIT. Built for the **NEAR HACKATHON — AI Security & Defense** track, November 2026.
+MIT. Built for the **NEAR HACKATHON - AI Security & Defense** track, November 2026.

@@ -4,7 +4,7 @@ import './globals.css'
 
 const TITLE = 'Feral — Agent Security Platform for NEAR'
 const DESCRIPTION =
-  'The security layer for autonomous money on NEAR. 17 checks enforced on-chain, adaptive reputation, anomaly detection, and circuit breakers for AI agents.'
+  'The security layer for autonomous money on NEAR. 22 checks enforced on-chain, adaptive reputation, anomaly detection, and circuit breakers for AI agents.'
 
 export default function RootLayout({
   children,
@@ -12,7 +12,7 @@ export default function RootLayout({
   children: React.ReactNode
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <head>
         <link rel="icon" href="/favicon.ico" sizes="any" />
         <meta name="viewport" content="width=device-width, initial-scale=1" />

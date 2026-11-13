@@ -35,7 +35,7 @@ deployment script that talks to testnet.
 
 ## Known limitations
 
-- **Not externally audited.** The security claims are backed by 159 JavaScript
+- **Not externally audited.** The security claims are backed by 186 JavaScript
   tests, 60 Rust contract tests, 52 adversarial scenarios, and 37/37 conformance
   checks against the live contract. See [THREAT_MODEL.md](THREAT_MODEL.md) for
   the full analysis of each adversary and residual risk.

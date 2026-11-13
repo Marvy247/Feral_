@@ -37,6 +37,7 @@ import {
 } from '../demo/scenarios.ts';
 import { loadQuoteFixture, ONE_CLICK_ASSETS, requestQuote, IntentsError, snapshotFromQuote } from '../chain/intents.ts';
 import { SIGNER_ACCOUNTS, derivedPublicKey } from '../chain/chainsig.ts';
+import { CAPABILITIES } from '../generated/capabilities.ts';
 
 const color = process.stdout.isTTY ?? false;
 const paint = (code: string, text: string): string => (color ? `\u001b[${code}m${text}\u001b[0m` : text);
@@ -252,7 +253,9 @@ async function commandJudge(): Promise<number> {
   console.log('-'.repeat(62));
   if (failures.length === 0) {
     console.log(`${green('FERAL DEMO COMPLETE')}  ${decisions} decisions, 0 failures`);
-    console.log('3 agents, 1 vault, 17 checks enforced on-chain. No wallet was needed.');
+    console.log(
+      `3 agents, 1 vault, ${CAPABILITIES.totals.onChainChecks} checks enforced on-chain. No wallet was needed.`,
+    );
   } else {
     console.log(red(`${failures.length} scene(s) failed:`));
     for (const failure of failures) console.log(`  - ${failure}`);

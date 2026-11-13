@@ -6,6 +6,10 @@ limits, reputation, anomaly detection, circuit breakers, multi-agent aggregate
 limits and timelocked governance on-chain, plus a pure TypeScript mirror that
 adds the quote checks the contract cannot see.
 
+`docs/demo/index.html` is the zero-install entry point: the shipping engine and
+the 52-scenario catalogue compiled into one static page, with no server and no
+network. `npm run demo:check` fails if that committed page is stale.
+
 ## Verify it in 60 seconds, without installing anything
 
 ```bash
@@ -25,7 +29,7 @@ directly.
 
 | Path | What lives there |
 |---|---|
-| `contract/src/lib.rs` | the Rust vault: 20 checks, reputation, anomaly, breakers, timelocks, approvals, 60 tests |
+| `contract/src/lib.rs` | the Rust vault: 22 checks enforced on-chain, reputation, anomaly, breakers, timelocks, approvals, 60 tests |
 | `src/core/engine.ts` | pure `evaluate(policy, action, ledgerView, ctx) -> Decision`, the mirror of the contract |
 | `src/core/policy.ts` | v2 policy schema, strict validation, compilation, hash pinning |
 | `src/core/service.ts` | `FeralGuard`: submissions, reservations, approvals, governance, simulation, persistence |
@@ -35,6 +39,8 @@ directly.
 | `src/core/money.ts` | exact `bigint` money; `parseAmount` refuses silent rounding |
 | `src/demo/scenarios.ts` | 52-scenario catalogue; single source of truth for CLI, dashboard, tests |
 | `src/demo/prompt-injection.ts` | untrusted vendor page, deterministic planner, injected task through `GatedToolbox` |
+| `src/browser/` | the browser entry, page template and `crypto`/`fs`/`path` shims for the self-contained demo |
+| `src/generated/capabilities.ts` | generated capability manifest consumed by the CLI and tests; do not edit by hand |
 | `src/chain/secp256k1.ts` | dependency-free public-key recovery; verifies MPC signatures |
 | `src/chain/evm.ts` | RLP + EIP-1559 encoding, MPC signature parsing |
 | `src/cli/agent-attack.ts` | `npm run agent:attack`; the injection narrative |
@@ -42,6 +48,14 @@ directly.
 | `src/app/` | dashboard server and page (no build step) |
 | `dashboard/` | Next.js product dashboard; proxies `/api/*` to `feral serve`, holds no policy logic |
 | `contract/res/feral_vault.wasm` | the built contract |
+| `scripts/build-demo.ts` | dependency-free bundler; `npm run demo:build`, `demo:check` verifies the committed artefact |
+| `scripts/gen-capabilities.ts` | regenerates `docs/CAPABILITIES.json`, `src/generated/capabilities.ts` and the README check table; `caps:check` |
+| `scripts/verify-claims.ts` | re-measures every README claim, writes `docs/CLAIMS.md`; `verify:claims` |
+| `scripts/check-readme-numbers.ts` | fails when README test, scenario or check counts drift from the code |
+| `scripts/submit.mjs` | validates a submission payload and refuses to send without `--send` plus a typed confirmation |
+| `docs/demo/` | the committed browser demo; `index.html` plus the generated bundle |
+| `docs/CAPABILITIES.json` | machine-readable checks, reason codes, sections and scenario counts |
+| `docs/SUBMISSION.md` | submission fields, naming guidance and the human-only publication steps |
 | `scripts/testnet-agent-attack.ts` | live on-chain denial of an injected payment |
 | `scripts/testnet-mpc-sign.ts` | live MPC signature + local recovery check (no broadcast by default) |
 
@@ -68,6 +82,11 @@ directly.
 - New dashboard endpoint: `src/app/server.ts`, JSON errors only (`{ error }`).
 - New command in the docs: `npm run audit:docs` is part of preflight, so the
   script must exist in `package.json` before the README mentions it.
+- After changing a check, reason code, scenario or test count: run
+  `npm run caps:gen`, `npm run demo:build`, then `npm run verify:claims` and
+  `npm run preflight:offline` so the manifest, browser bundle and README agree.
+- New submission field: update `submission.example.json` and
+  `docs/SUBMISSION.md`; run `node scripts/submit.mjs --dry-run` to validate it.
 - Rebuild the contract: `cd contract && ./build.sh`.
 - Run the contract tests: `cd contract && ./test.sh`.
 

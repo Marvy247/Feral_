@@ -15,7 +15,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { loadPolicy, type PolicyDoc } from '../core/policy.ts';
 import { FeralGuard } from '../core/service.ts';
-import type { ActionRequest } from '../core/engine.ts';
+import type { ActionRequest, CheckResult } from '../core/engine.ts';
 import { sha256Hex } from '../core/canonical.ts';
 
 export const START = Date.parse('2026-11-02T12:00:00Z');
@@ -545,6 +545,10 @@ export interface ScenarioResult {
   passed: boolean;
   codes: string[];
   detail: string;
+  /** Every check the engine ran, with the number it used. Shown by the demo page. */
+  checks?: CheckResult[];
+  /** Agent state after the attempt: reputation, breaker level, anomaly score. */
+  state?: { reputation: number; breakerLevel: number; anomalyScore: number };
 }
 
 export function makeGuard(
@@ -573,6 +577,7 @@ export async function runScenario(entry: Scenario): Promise<ScenarioResult> {
   let verdict: string;
   let codes: string[];
   let detail: string;
+  let checks: CheckResult[] | undefined;
   if (entry.run) {
     const outcome = await entry.run(guard, clock);
     verdict = outcome.verdict;
@@ -592,8 +597,10 @@ export async function runScenario(entry: Scenario): Promise<ScenarioResult> {
     verdict = decision.verdict;
     codes = decision.reasons.map((r) => r.code as string);
     detail = decision.reasons.map((r) => r.message).join(' | ');
+    checks = decision.checks;
   }
 
+  const agentState = guard.getAgent(entry.agent);
   const codesOk = (entry.expectCodes ?? []).every((c) => codes.includes(c));
   return {
     id: entry.id,
@@ -605,6 +612,14 @@ export async function runScenario(entry: Scenario): Promise<ScenarioResult> {
     passed: verdict === entry.expect && codesOk,
     codes,
     detail,
+    checks,
+    state: agentState
+      ? {
+          reputation: agentState.reputation,
+          breakerLevel: agentState.circuitBreaker,
+          anomalyScore: guard.getAnomalyScore(entry.agent),
+        }
+      : undefined,
   };
 }
 

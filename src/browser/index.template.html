@@ -1,0 +1,672 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Feral - policy-enforced custody for autonomous agents on NEAR</title>
+<meta name="description" content="The real Feral engine, running in your browser: 52 escape attempts, every check, every verdict, no install, no wallet, no network." />
+<meta property="og:title" content="Feral - NEAR HACKATHON demo" />
+<meta property="og:description" content="Policy-enforced custody for autonomous agents on NEAR. This page runs the shipping engine." />
+<meta property="og:type" content="website" />
+<style>
+  :root {
+    --bg: #0b0f14;
+    --bg-2: #111821;
+    --bg-3: #16202b;
+    --line: #22303d;
+    --fg: #dce6f0;
+    --fg-dim: #8496a8;
+    --fg-faint: #5d6f81;
+    --accent: #4ade80;
+    --accent-2: #38bdf8;
+    --warn: #fbbf24;
+    --danger: #f87171;
+    --mono: ui-monospace, "SF Mono", "JetBrains Mono", "Fira Code", Menlo, Consolas, monospace;
+    --sans: ui-sans-serif, -apple-system, "Segoe UI", Inter, Roboto, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  html { scroll-behavior: smooth; }
+  body {
+    margin: 0;
+    background: var(--bg);
+    color: var(--fg);
+    font-family: var(--sans);
+    font-size: 15px;
+    line-height: 1.55;
+    -webkit-font-smoothing: antialiased;
+  }
+  a { color: var(--accent-2); text-decoration: none; }
+  a:hover { text-decoration: underline; }
+  code, .mono { font-family: var(--mono); font-size: 0.86em; }
+  .wrap { max-width: 1280px; margin: 0 auto; padding: 0 24px; }
+
+  header {
+    border-bottom: 1px solid var(--line);
+    background: linear-gradient(180deg, #0d141c 0%, var(--bg) 100%);
+    padding: 28px 0 22px;
+  }
+  .brand { display: flex; align-items: baseline; gap: 14px; flex-wrap: wrap; }
+  .brand h1 { font-size: 30px; margin: 0; letter-spacing: -0.02em; }
+  .brand h1 span { color: var(--accent); }
+  .tagline { color: var(--fg-dim); margin: 6px 0 0; max-width: 72ch; }
+  .badges { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 16px; }
+  .badge {
+    font-family: var(--mono); font-size: 11.5px; letter-spacing: 0.02em;
+    border: 1px solid var(--line); border-radius: 999px; padding: 4px 11px;
+    color: var(--fg-dim); background: var(--bg-2);
+  }
+  .badge.on { color: var(--accent); border-color: #1f4d35; background: #0e1c15; }
+
+  nav { display: flex; gap: 18px; flex-wrap: wrap; margin-top: 18px; font-size: 13.5px; }
+  nav a { color: var(--fg-dim); }
+  nav a:hover { color: var(--fg); text-decoration: none; }
+
+  section { padding: 34px 0; border-bottom: 1px solid var(--line); }
+  .sec-head { display: flex; align-items: baseline; gap: 12px; margin-bottom: 6px; flex-wrap: wrap; }
+  .sec-head h2 { font-size: 19px; margin: 0; letter-spacing: -0.01em; }
+  .eyebrow { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); letter-spacing: 0.14em; text-transform: uppercase; }
+  .sec-note { color: var(--fg-dim); margin: 4px 0 18px; max-width: 82ch; font-size: 14px; }
+
+  .grid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.15fr); gap: 22px; align-items: start; }
+  @media (max-width: 1000px) { .grid { grid-template-columns: minmax(0, 1fr); } }
+
+  .card { background: var(--bg-2); border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+  .card h3 { margin: 0; padding: 12px 15px; font-size: 13px; font-family: var(--mono); font-weight: 600; letter-spacing: 0.04em; text-transform: uppercase; color: var(--fg-dim); border-bottom: 1px solid var(--line); background: var(--bg-3); }
+  .card .body { padding: 15px; }
+  .card .body.tight { padding: 0; }
+
+  .kv { display: grid; grid-template-columns: auto 1fr; gap: 4px 14px; font-size: 13px; }
+  .kv dt { color: var(--fg-faint); }
+  .kv dd { margin: 0; font-family: var(--mono); font-size: 12.5px; word-break: break-all; }
+
+  .meter { height: 7px; border-radius: 4px; background: #1c2836; overflow: hidden; margin: 7px 0 12px; }
+  .meter > i { display: block; height: 100%; background: var(--accent); transition: width 0.25s ease; }
+  .meter.warn > i { background: var(--warn); }
+  .meter.bad > i { background: var(--danger); }
+
+  .stat-row { display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: 10px; margin-bottom: 14px; }
+  .stat { background: var(--bg-3); border: 1px solid var(--line); border-radius: 9px; padding: 9px 11px; }
+  .stat .k { font-family: var(--mono); font-size: 10.5px; color: var(--fg-faint); text-transform: uppercase; letter-spacing: 0.08em; }
+  .stat .v { font-family: var(--mono); font-size: 17px; margin-top: 2px; }
+
+  .btn-row { display: flex; flex-wrap: wrap; gap: 7px; margin-bottom: 14px; }
+  button.act {
+    font-family: var(--mono); font-size: 12px; cursor: pointer;
+    background: var(--bg-3); color: var(--fg); border: 1px solid var(--line);
+    border-radius: 7px; padding: 7px 10px; text-align: left;
+  }
+  button.act:hover { border-color: var(--accent-2); color: #fff; }
+  button.act:active { transform: translateY(1px); }
+  button.act.approve { border-color: #1f4d35; color: var(--accent); }
+
+  .verdict { font-family: var(--mono); font-size: 11px; font-weight: 700; letter-spacing: 0.05em; padding: 2px 7px; border-radius: 5px; text-transform: uppercase; white-space: nowrap; }
+  .v-deny { background: #2b1416; color: var(--danger); border: 1px solid #4a2025; }
+  .v-allow { background: #0e1c15; color: var(--accent); border: 1px solid #1f4d35; }
+  .v-require_approval { background: #241d0c; color: var(--warn); border: 1px solid #4a3a14; }
+  .v-idle, .v-cancelled, .v-frozen, .v-thawed { background: #18222d; color: var(--fg-dim); border: 1px solid var(--line); }
+  .v-other { background: #18222d; color: var(--fg-dim); border: 1px solid var(--line); }
+
+  table { width: 100%; border-collapse: collapse; font-size: 13px; }
+  thead th {
+    position: sticky; top: 0; z-index: 2; text-align: left; font-family: var(--mono);
+    font-size: 10.5px; letter-spacing: 0.08em; text-transform: uppercase; color: var(--fg-faint);
+    background: var(--bg-3); padding: 9px 12px; border-bottom: 1px solid var(--line); font-weight: 600;
+  }
+  tbody td { padding: 8px 12px; border-bottom: 1px solid #1a2430; vertical-align: top; }
+  tbody tr.row { cursor: pointer; }
+  tbody tr.row:hover { background: #14202b; }
+  tbody tr.row.open { background: #14202b; }
+  td.num { font-family: var(--mono); color: var(--fg-faint); width: 34px; }
+  td.name { min-width: 210px; }
+  td.wall { color: var(--fg-dim); font-size: 12.5px; }
+  td.code { width: 1%; white-space: nowrap; }
+  .chip { font-family: var(--mono); font-size: 10.5px; border: 1px solid var(--line); color: var(--fg-dim); border-radius: 4px; padding: 1px 6px; margin-right: 4px; display: inline-block; }
+  .chip.bad { color: var(--danger); border-color: #4a2025; }
+  .chip.good { color: var(--accent); border-color: #1f4d35; }
+  tr.detail td { background: #0e161e; padding: 0; }
+  .checks { padding: 12px 14px; font-size: 12.5px; }
+  .check { display: grid; grid-template-columns: 20px 1fr; gap: 8px; padding: 4px 0; border-bottom: 1px dashed #1c2733; }
+  .check:last-child { border-bottom: none; }
+  .check .mark { font-family: var(--mono); font-weight: 700; }
+  .check.pass .mark { color: var(--accent); }
+  .check.fail .mark { color: var(--danger); }
+  .check .t { font-weight: 600; }
+  .check .d { color: var(--fg-dim); font-family: var(--mono); font-size: 11.5px; }
+
+  .toolbar { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; padding: 11px 15px; border-bottom: 1px solid var(--line); background: var(--bg-3); }
+  .toolbar input[type="search"] {
+    background: var(--bg); border: 1px solid var(--line); border-radius: 7px; color: var(--fg);
+    padding: 6px 10px; font-family: var(--mono); font-size: 12px; min-width: 210px; flex: 1 1 210px;
+  }
+  .toolbar input[type="search"]:focus { outline: none; border-color: var(--accent-2); }
+  .filter { font-family: var(--mono); font-size: 11.5px; cursor: pointer; border: 1px solid var(--line); background: var(--bg); color: var(--fg-dim); border-radius: 999px; padding: 4px 10px; }
+  .filter.on { color: var(--accent); border-color: #1f4d35; background: #0e1c15; }
+  .filter:hover { color: var(--fg); }
+
+  .feed { max-height: 340px; overflow: auto; }
+  .feed .item { padding: 9px 15px; border-bottom: 1px solid #1a2430; }
+  .feed .item .top { display: flex; justify-content: space-between; gap: 10px; align-items: center; }
+  .feed .item .lbl { font-size: 13px; }
+  .feed .item .meta { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); margin-top: 3px; }
+  .feed .empty { padding: 14px 15px; color: var(--fg-faint); font-family: var(--mono); font-size: 12px; }
+
+  .caps { display: grid; grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)); gap: 12px; }
+  .cap { background: var(--bg-2); border: 1px solid var(--line); border-radius: 10px; padding: 13px 14px; }
+  .cap .n { font-family: var(--mono); font-size: 23px; color: var(--accent); }
+  .cap .l { font-size: 12.5px; color: var(--fg-dim); margin-top: 3px; }
+  .cap .s { font-family: var(--mono); font-size: 11px; color: var(--fg-faint); margin-top: 5px; }
+
+  pre.cmd { background: var(--bg-2); border: 1px solid var(--line); border-radius: 9px; padding: 12px 14px; overflow-x: auto; font-family: var(--mono); font-size: 12.5px; margin: 0; }
+  pre.cmd .c { color: var(--fg-faint); }
+  footer { padding: 26px 0 46px; color: var(--fg-faint); font-size: 12.5px; }
+  .caps-list { columns: 3; column-gap: 22px; font-family: var(--mono); font-size: 11.5px; color: var(--fg-dim); }
+  @media (max-width: 760px) { .caps-list { columns: 1; } }
+  .caps-list li { break-inside: avoid; margin-bottom: 2px; }
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div class="brand">
+      <h1>Fer<span>al</span></h1>
+      <div class="badges">
+        <span class="badge on" id="badge-verdict">running the real engine</span>
+        <span class="badge">no install</span>
+        <span class="badge">no wallet</span>
+        <span class="badge">no network</span>
+        <span class="badge">no API key</span>
+        <span class="badge" id="badge-hash">policy hash ...</span>
+      </div>
+    </div>
+    <p class="tagline" id="tagline">
+      An AI agent holds a key that can only call <code>spend()</code>. The contract holding the funds
+      recomputes every limit, reputation score and anomaly signal from its own storage before a
+      single unit moves. This page runs that engine - the same code the CLI, the dashboard and the
+      Rust vault run - in your browser.
+    </p>
+    <nav>
+      <a href="#live">Live console</a>
+      <a href="#walls">The 52 walls</a>
+      <a href="#capability">What runs where</a>
+      <a href="#verify">Verify it yourself</a>
+    </nav>
+  </div>
+</header>
+
+<section id="live">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">01 / live console</span><h2>Push actions through the real guard</h2></div>
+    <p class="sec-note">
+      These buttons call <code>FeralGuard.submit()</code> - the same method the CLI, the HTTP guard
+      and the dashboard call. Every click is a real decision: limits, reputation, anomaly state,
+      breakers and the hash-chained audit log all move.
+    </p>
+    <div class="grid">
+      <div>
+        <div class="card">
+          <h3>agent state</h3>
+          <div class="body">
+            <div class="stat-row">
+              <div class="stat"><div class="k">reputation</div><div class="v" id="s-rep">100</div></div>
+              <div class="stat"><div class="k">breaker</div><div class="v" id="s-brk">0</div></div>
+              <div class="stat"><div class="k">anomaly</div><div class="v" id="s-anom">0</div></div>
+            </div>
+            <div class="k" style="font-family:var(--mono);font-size:10.5px;color:var(--fg-faint);text-transform:uppercase;letter-spacing:.08em">effective per-tx limit (reputation scaled)</div>
+            <div class="meter" id="s-meter"><i style="width:100%"></i></div>
+            <dl class="kv">
+              <dt>daily USDC left</dt><dd id="s-left">-</dd>
+              <dt>audit head</dt><dd id="s-head">-</dd>
+              <dt>audit records</dt><dd id="s-recs">0</dd>
+              <dt>chain verified</dt><dd id="s-ok">yes</dd>
+            </dl>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:18px">
+          <h3>approvals waiting for a human</h3>
+          <div class="body" id="approvals"><div class="feed"><div class="empty">nothing pending</div></div></div>
+        </div>
+      </div>
+
+      <div>
+        <div class="card">
+          <h3>try an action</h3>
+          <div class="body">
+            <div class="btn-row" id="actions"></div>
+            <div id="last-detail" style="font-family:var(--mono);font-size:12px;color:var(--fg-dim);min-height:20px"></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:18px">
+          <h3>decision feed</h3>
+          <div class="body tight">
+            <div class="feed" id="feed"><div class="empty">no decisions yet - press a button above</div></div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:18px">
+          <h3>checks the engine ran on the last action</h3>
+          <div class="body tight"><div class="checks" id="checks"><div class="empty" style="padding:14px 15px;color:var(--fg-faint);font-family:var(--mono);font-size:12px">no action yet</div></div></div>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="walls">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">02 / the catalogue</span><h2>Every escape attempt, and the wall it hits</h2></div>
+    <p class="sec-note" id="walls-note">
+      The catalogue is the single source of truth in the repository: the adversarial test suite, the
+      <code>feral attack</code> command and this page all run the same scenarios and assert the same
+      verdicts. Expand a row to see every check the engine ran and the number it used.
+    </p>
+    <div class="card">
+      <div class="toolbar">
+        <input type="search" id="q" placeholder="search scenarios, walls, reason codes..." />
+        <span id="filters"></span>
+      </div>
+      <div class="body tight" style="max-height:620px;overflow:auto">
+        <table>
+          <thead>
+            <tr><th>#</th><th>attempt</th><th>wall</th><th>verdict</th><th>reason codes</th></tr>
+          </thead>
+          <tbody id="rows"></tbody>
+        </table>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="capability">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">03 / what runs where</span><h2>The contract enforces; the mirror explains</h2></div>
+    <p class="sec-note">
+      Feral's engine runs twice. The Rust vault recomputes the fund-moving checks from its own
+      storage on every call, so a compromised off-chain process cannot widen the limits. The
+      TypeScript mirror runs the same checks plus the quote-level ones the contract cannot see,
+      before submission, so refusals come with an explanation.
+    </p>
+    <div class="caps" id="caps"></div>
+    <div class="card" style="margin-top:18px">
+      <h3>reason codes the Rust vault enforces</h3>
+      <div class="body">
+        <ul class="caps-list" id="onchain"></ul>
+        <p class="sec-note" style="margin:14px 0 0;font-size:12.5px">
+          Read straight out of <code>contract/src/lib.rs</code> when this page was built.
+        </p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section id="verify">
+  <div class="wrap">
+    <div class="sec-head"><span class="eyebrow">04 / verify it yourself</span><h2>Do not take this page's word for it</h2></div>
+    <p class="sec-note">
+      Everything above is reproducible offline from a clean checkout. No install, no network, no
+      wallet - the only npm dependency in the repository is a devDependency used by the optional
+      testnet scripts.
+    </p>
+    <pre class="cmd" id="cmds"></pre>
+    <div class="grid" style="margin-top:18px">
+      <div class="card">
+        <h3>live deployment</h3>
+        <div class="body">
+          <dl class="kv">
+            <dt>testnet vault</dt>
+            <dd><a href="https://testnet.nearblocks.io/account/aa0cfa9951c95da04c563952ca56c79d078e10fb73c8987e66bed2d4202d38fb">aa0cfa99...d4202d38fb</a></dd>
+            <dt>redeploy tx</dt>
+            <dd><a href="https://testnet.nearblocks.io/txns/yhsp8BZnczRzyWUn4CxfaKyMbjPizE9BJ6G5x2GL43W">yhsp8BZn...G5x2GL43W</a></dd>
+            <dt>denied spend</dt>
+            <dd><a href="https://testnet.nearblocks.io/txns/B7i3Q1Yx8qA84yTpfpmbyDLYaM3Li5HZwF49JdQRqxtU">B7i3Q1Yx...JdQRqxtU</a></dd>
+            <dt>repository</dt>
+            <dd><a href="https://github.com/Marvy247/Feral_">github.com/Marvy247/Feral_</a></dd>
+          </dl>
+        </div>
+      </div>
+      <div class="card">
+        <h3>the policy on this page</h3>
+        <div class="body">
+          <dl class="kv" id="policy-kv"></dl>
+        </div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<footer>
+  <div class="wrap">
+    Feral - built at NEAR HACKATHON, AI Security &amp; Defense track. The engine on this page is the
+    shipping engine: the same <code>evaluate()</code>, the same reputation arithmetic, the same
+    anomaly detector, the same audit chain, compiled from the repository by
+    <code>scripts/build-demo.ts</code>. Nothing on this page is a mock.
+  </div>
+</footer>
+
+<script>
+/*__FERAL_BUNDLE__*/
+</script>
+<script>
+(function () {
+  'use strict';
+  var $ = function (id) { return document.getElementById(id); };
+
+  function verdictClass(v) {
+    if (v === 'deny') return 'v-deny';
+    if (v === 'allow') return 'v-allow';
+    if (v === 'require_approval') return 'v-require_approval';
+    if (v === 'idle' || v === 'cancelled' || v === 'frozen' || v === 'thawed') return 'v-idle';
+    return 'v-other';
+  }
+  function el(tag, cls, text) {
+    var node = document.createElement(tag);
+    if (cls) node.className = cls;
+    if (text !== undefined && text !== null) node.textContent = String(text);
+    return node;
+  }
+
+  // ------------------------------------------------------------ scenarios ----
+  var payload = null;
+  var filterCat = '';
+  var filterVerdict = '';
+  var query = '';
+  var openRow = null;
+
+  function renderRows() {
+    var tbody = $('rows');
+    tbody.textContent = '';
+    var shown = 0;
+    payload.scenarios.forEach(function (s) {
+      if (filterCat && s.category !== filterCat) return;
+      if (filterVerdict && s.verdict !== filterVerdict) return;
+      if (query) {
+        var hay = (s.name + ' ' + s.wall + ' ' + s.category + ' ' + s.codes.join(' ') + ' ' + s.detail).toLowerCase();
+        if (hay.indexOf(query) === -1) return;
+      }
+      shown += 1;
+      var tr = el('tr', 'row');
+      tr.appendChild(el('td', 'num', s.id));
+      var nameTd = el('td', 'name');
+      nameTd.appendChild(el('div', null, s.name));
+      var desc = el('div', null, s.description);
+      desc.style.cssText = 'color:var(--fg-faint);font-size:11.5px;margin-top:2px';
+      nameTd.appendChild(desc);
+      tr.appendChild(nameTd);
+      var wall = el('td', 'wall');
+      wall.appendChild(el('span', 'chip', s.category));
+      wall.appendChild(document.createTextNode(s.wall));
+      tr.appendChild(wall);
+      var vtd = el('td');
+      vtd.appendChild(el('span', 'verdict ' + verdictClass(s.verdict), s.verdict));
+      tr.appendChild(vtd);
+      var ctd = el('td', 'code');
+      s.codes.slice(0, 3).forEach(function (c) {
+        ctd.appendChild(el('span', 'chip ' + (s.verdict === 'deny' ? 'bad' : 'good'), c));
+      });
+      tr.appendChild(ctd);
+
+      var detail = el('tr', 'detail');
+      detail.style.display = 'none';
+      var dtd = el('td');
+      dtd.colSpan = 5;
+      var box = el('div', 'checks');
+      (s.checks || []).forEach(function (c) {
+        var row = el('div', 'check ' + (c.passed ? 'pass' : 'fail'));
+        row.appendChild(el('div', 'mark', c.passed ? '✓' : '✕'));
+        var right = el('div');
+        right.appendChild(el('div', 't', c.title));
+        if (c.detail) right.appendChild(el('div', 'd', c.detail));
+        row.appendChild(right);
+        box.appendChild(row);
+      });
+      if (!s.checks || !s.checks.length) {
+        box.appendChild(el('div', 'd', 'this attempt is a state transition, not a spend decision: ' + s.detail));
+      }
+      dtd.appendChild(box);
+      detail.appendChild(dtd);
+
+      tr.addEventListener('click', function () {
+        var isOpen = detail.style.display !== 'none';
+        if (openRow) { openRow.detail.style.display = 'none'; openRow.tr.classList.remove('open'); }
+        if (!isOpen) {
+          detail.style.display = '';
+          tr.classList.add('open');
+          openRow = { tr: tr, detail: detail };
+        } else { openRow = null; }
+      });
+
+      tbody.appendChild(tr);
+      tbody.appendChild(detail);
+    });
+    $('walls-note').textContent =
+      payload.totals.count + ' attempts: ' + payload.totals.denied + ' denied, ' +
+      payload.totals.escalated + ' sent to a human, ' + payload.totals.allowed + ' allowed. ' +
+      (payload.totals.failed === 0
+        ? 'Every verdict matches the expected verdict the test suite asserts.'
+        : payload.totals.failed + ' DO NOT match the expected verdict.') +
+      ' Showing ' + shown + '. Expand a row to see every check the engine ran and the number it used.';
+  }
+
+  function renderFilters() {
+    var box = $('filters');
+    box.textContent = '';
+    var cats = payload.categories.map(function (c) { return c.name; });
+    cats.forEach(function (name) {
+      var b = el('button', 'filter' + (filterCat === name ? ' on' : ''), name);
+      b.addEventListener('click', function () {
+        filterCat = filterCat === name ? '' : name;
+        renderFilters();
+        renderRows();
+      });
+      box.appendChild(b);
+    });
+    ['deny', 'require_approval', 'allow'].forEach(function (v) {
+      var b = el('button', 'filter' + (filterVerdict === v ? ' on' : ''), v);
+      b.addEventListener('click', function () {
+        filterVerdict = filterVerdict === v ? '' : v;
+        renderFilters();
+        renderRows();
+      });
+      box.appendChild(b);
+    });
+  }
+
+  // ------------------------------------------------------------ capability ----
+  function renderCapability() {
+    var caps = $('caps');
+    caps.textContent = '';
+    var items = [
+      { n: payload.capability.offChainReasonCodes, l: 'reason codes in the off-chain mirror', s: 'src/core/engine.ts - includes the quote checks the contract cannot see' },
+      { n: payload.capability.onChainReasonCodes.length, l: 'reason codes the Rust vault enforces', s: 'contract/src/lib.rs - recomputed from the vault\'s own storage' },
+      { n: payload.capability.contractLines, l: 'lines of Rust in the vault', s: 'contract/src/lib.rs' },
+      { n: payload.capability.rustTests, l: 'Rust unit tests on a NEAR VM', s: 'cargo test - runs in CI' },
+      { n: payload.totals.count, l: 'escape attempts with an asserted verdict', s: 'one catalogue, three consumers: tests, CLI, this page' },
+      { n: payload.totals.denied, l: 'attempts that never reached the money', s: 'deny + a reason code + a reputation penalty' }
+    ];
+    items.forEach(function (item) {
+      var card = el('div', 'cap');
+      card.appendChild(el('div', 'n', item.n));
+      card.appendChild(el('div', 'l', item.l));
+      card.appendChild(el('div', 's', item.s));
+      caps.appendChild(card);
+    });
+
+    var list = $('onchain');
+    list.textContent = '';
+    payload.capability.onChainReasonCodes.forEach(function (code) {
+      list.appendChild(el('li', null, code));
+    });
+  }
+
+  function renderPolicy() {
+    var kv = $('policy-kv');
+    kv.textContent = '';
+    var rows = [
+      ['name', payload.product.policyName],
+      ['hash', payload.product.policyHash],
+      ['owner', payload.product.owner],
+      ['agents', payload.policy.agents.map(function (a) { return a.account + ' (' + a.tier + ')'; }).join(', ')],
+      ['per-tx USDC', payload.policy.agents.map(function (a) { return a.account + ': ' + (a.limits.perTx || '-'); }).join(' · ')],
+      ['counterparties', payload.policy.counterparties.mode + ' - allow ' + payload.policy.counterparties.allow.length + ', deny ' + payload.policy.counterparties.deny.length],
+      ['approvals', 'above $' + payload.policy.approvals.thresholdUsd + ', quorum ' + payload.policy.approvals.quorum + ' (' + payload.policy.approvals.approvers.join(', ') + ')'],
+      ['velocity', payload.policy.velocity.maxTxPerHour + ' tx/hour, min ' + payload.policy.velocity.minIntervalSeconds + 's apart'],
+      ['swaps', payload.policy.intents.venues.join(', ') + ', max slippage ' + payload.policy.intents.maxSlippageBps + ' bps'],
+      ['pinned output', payload.policy.intents.allowedDestinations.join(', ') || 'none']
+    ];
+    rows.forEach(function (pair) {
+      kv.appendChild(el('dt', null, pair[0]));
+      kv.appendChild(el('dd', null, pair[1]));
+    });
+  }
+
+  // ---------------------------------------------------------------- live ----
+  var session = null;
+
+  function renderState(state) {
+    $('s-rep').textContent = state.reputation;
+    $('s-brk').textContent = state.breakerLevel;
+    $('s-anom').textContent = state.anomalyScore;
+    $('s-left').textContent = state.dailyRemaining;
+    $('s-head').textContent = state.auditHead.slice(0, 24) + '…';
+    $('s-recs').textContent = state.auditRecords;
+    $('s-ok').textContent = state.auditOk ? 'yes' : 'BROKEN';
+    $('s-ok').style.color = state.auditOk ? 'var(--accent)' : 'var(--danger)';
+
+    var meter = $('s-meter');
+    var bar = meter.querySelector('i');
+    var pct = Math.max(0, Math.min(100, state.reputation));
+    bar.style.width = pct + '%';
+    meter.className = 'meter' + (pct < 40 ? ' bad' : pct < 70 ? ' warn' : '');
+
+    $('last-detail').textContent = state.verdict === 'idle'
+      ? ''
+      : state.verdict + (state.codes.length ? ' - ' + state.codes.join(', ') : '') +
+        (state.detail ? ' - ' + state.detail : '');
+
+    var feed = $('feed');
+    feed.textContent = '';
+    if (!state.history.length) {
+      feed.appendChild(el('div', 'empty', 'no decisions yet - press a button above'));
+    } else {
+      state.history.forEach(function (item) {
+        var wrap = el('div', 'item');
+        var top = el('div', 'top');
+        top.appendChild(el('div', 'lbl', item.label));
+        top.appendChild(el('span', 'verdict ' + verdictClass(item.verdict), item.verdict));
+        wrap.appendChild(top);
+        var meta = el('div', 'meta', item.at + (item.codes.length ? ' · ' + item.codes.join(', ') : ''));
+        wrap.appendChild(meta);
+        feed.appendChild(wrap);
+      });
+    }
+
+    var approvals = $('approvals');
+    approvals.textContent = '';
+    var feedBox = el('div', 'feed');
+    if (!state.pendingApprovals.length) {
+      feedBox.appendChild(el('div', 'empty', 'nothing pending'));
+    } else {
+      state.pendingApprovals.forEach(function (p) {
+        var wrap = el('div', 'item');
+        var top = el('div', 'top');
+        top.appendChild(el('div', 'lbl', p.amount + ' USDC → ' + p.to));
+        var btn = el('button', 'act approve', 'approve as alice.near');
+        btn.addEventListener('click', function () {
+          session.approve(p.id).then(renderState);
+        });
+        top.appendChild(btn);
+        wrap.appendChild(top);
+        wrap.appendChild(el('div', 'meta', 'expires ' + p.expiresAt));
+        feedBox.appendChild(wrap);
+      });
+    }
+    approvals.appendChild(feedBox);
+
+    var checks = $('checks');
+    checks.textContent = '';
+    if (!state.checks.length) {
+      checks.appendChild(el('div', 'empty', 'no action yet'));
+    } else {
+      state.checks.forEach(function (c) {
+        var row = el('div', 'check ' + (c.passed ? 'pass' : 'fail'));
+        row.appendChild(el('div', 'mark', c.passed ? '✓' : '✕'));
+        var right = el('div');
+        right.appendChild(el('div', 't', c.title));
+        if (c.detail) right.appendChild(el('div', 'd', c.detail));
+        row.appendChild(right);
+        checks.appendChild(row);
+      });
+    }
+  }
+
+  var ACTIONS = [
+    { label: 'pay 5 USDC to a listed vendor', action: { amount: '5', to: 'compute.near' } },
+    { label: 'ask for 26 USDC (per-tx cap)', action: { amount: '26', to: 'compute.near' } },
+    { label: 'pay a stranger', action: { amount: '5', to: 'attacker.near' } },
+    { label: 'pay 20 USDC (needs approval)', action: { amount: '20', to: 'compute.near' } },
+    { label: 'swap 1 NEAR to the pinned address', action: { kind: 'intent.swap', asset: 'NEAR', amount: '1', quote: { originAsset: 'NEAR', destinationAddress: '0x583ddbf02324f75c3963c45686d52afaf2368c2f', slippageBps: 50, expiresAt: '2026-11-02T12:05:00Z' } } },
+    { label: 'add an access key', action: { kind: 'key.add', amount: '0.01' } },
+    { label: 'burst: pay 6 times fast', action: { burst: 6 } }
+  ];
+
+  function renderActions() {
+    var box = $('actions');
+    box.textContent = '';
+    ACTIONS.forEach(function (spec) {
+      var btn = el('button', 'act', spec.label);
+      btn.addEventListener('click', function () {
+        if (spec.action.burst) {
+          var chain = Promise.resolve();
+          for (var i = 0; i < spec.action.burst; i += 1) {
+            (function (n) {
+              chain = chain.then(function () {
+                return session.submit({ label: 'burst payment ' + (n + 1), amount: '4', to: 'compute.near' });
+              });
+            })(i);
+          }
+          chain.then(renderState);
+          return;
+        }
+        var action = { label: spec.label };
+        Object.keys(spec.action).forEach(function (key) { action[key] = spec.action[key]; });
+        session.submit(action).then(renderState);
+      });
+      box.appendChild(btn);
+    });
+  }
+
+  // ----------------------------------------------------------------- boot ----
+  function boot() {
+    session = window.FERAL_DEMO.createLiveSession();
+    renderState(session.state());
+    renderActions();
+
+    window.FERAL_DEMO.default.then(function (data) {
+      payload = data;
+      $('badge-hash').textContent = 'policy ' + data.product.policyHash.slice(0, 12);
+      $('badge-verdict').textContent =
+        data.totals.count + ' attempts · ' + data.totals.denied + ' denied · ' +
+        data.totals.failed === 0 ? 'all verdicts match' : 'MISMATCH';
+      renderFilters();
+      renderRows();
+      renderCapability();
+      renderPolicy();
+      $('cmds').textContent =
+        'git clone https://github.com/Marvy247/Feral_\n' +
+        'cd Feral_\n' +
+        'npm run test:all     # ' + data.capability.offChainReasonCodes + ' reason codes, ' +
+        data.totals.count + ' scenarios, one catalogue\n' +
+        'npm run attack       # every escape attempt, every verdict asserted\n' +
+        'npm run verify       # 1000 random actions, invariants checked after each\n' +
+        'npm run agent:attack # prompt injection -> denied payment -> split retry -> denied\n' +
+        'npm run serve        # the same guard on http://127.0.0.1:8787';
+    });
+  }
+
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot);
+  else boot();
+})();
+</script>
+</body>
+</html>

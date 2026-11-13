@@ -1,5 +1,18 @@
 # Feral demo
 
+## Open it in a browser (zero install, no wallet)
+
+**[Open the browser demo](https://raw.githack.com/Marvy247/Feral_/main/docs/demo/index.html)** — the shipping engine and the 52-scenario catalogue compiled into one static page. Run the catalogue, open the per-check detail, and push actions through a live guard in the console. It needs no server, wallet, key or network.
+
+The committed page is [docs/demo/index.html](demo/index.html). After changing the engine, the catalogue or the policy schema, rebuild and verify it:
+
+```bash
+npm run demo:build
+npm run demo:check
+```
+
+`demo:check` fails if the committed page no longer matches the sources.
+
 ## Narrated walkthrough
 
 **[Watch the 2:42 demo](feral-demo.mp4)** — live testnet denial, reputation
@@ -36,6 +49,9 @@ fully compromised and the vault still refuses.
 
 ## Zero-configuration path
 
+Open `docs/demo/index.html` in a browser, or use the browser-demo link above,
+then run:
+
 ```bash
 npm run agent:attack # the prompt-injection story, about 15 seconds
 npm run demo:judge   # about 60 seconds, no wallet, no keys, no network
@@ -48,7 +64,7 @@ npm run serve        # dashboard on http://127.0.0.1:8787
 
 `demo:judge` builds a three-agent vault in memory, runs ten scenes and exits 1 if
 any scene produces a different verdict than advertised. It needs Node.js >= 22.6
-and nothing else. The scenes are: a clean spend, an overspend, a stranger, a
+and nothing else. The browser demo is the same engine without Node at all. The scenes are: a clean spend, an overspend, a stranger, a
 burst, drainage, the aggregate cap, reputation-adjusted limits, an emergency
 freeze and thaw, a watcher cancelling a timelock, and the audit chain (including
 detecting a hand-edited record).

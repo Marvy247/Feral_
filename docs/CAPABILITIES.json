@@ -1,0 +1,1684 @@
+{
+  "$schema": "https://nearhackathon.com/HACKATHON.md",
+  "project": "Feral",
+  "description": "Policy-enforced custody for autonomous agents on NEAR.",
+  "generatedFrom": {
+    "engine": "src/core/engine.ts",
+    "contract": "contract/src/lib.rs",
+    "catalogue": "src/demo/scenarios.ts"
+  },
+  "totals": {
+    "engineChecks": 39,
+    "onChainChecks": 22,
+    "offChainOnlyChecks": 17,
+    "contractReasonCodes": 25,
+    "contractSections": 19,
+    "engineReasonCodes": 42,
+    "scenarios": 52,
+    "scenariosDenied": 44,
+    "scenariosEscalated": 1,
+    "scenariosAllowed": 4,
+    "scenariosFailing": 0
+  },
+  "coverage": {
+    "contractSections": [
+      {
+        "section": "1. Vault-level circuit breaker",
+        "reasonCodes": [
+          "EMERGENCY_FREEZE",
+          "VAULT_PAUSED"
+        ],
+        "mirroredBy": [
+          "vault-freeze",
+          "vault-paused"
+        ]
+      },
+      {
+        "section": "2. Agent-level circuit breaker",
+        "reasonCodes": [
+          "AGENT_PAUSED"
+        ],
+        "mirroredBy": [
+          "agent-paused"
+        ]
+      },
+      {
+        "section": "3. Agent paused",
+        "reasonCodes": [
+          "AGENT_PAUSED"
+        ],
+        "mirroredBy": [
+          "agent-paused"
+        ]
+      },
+      {
+        "section": "4. TEE attestation",
+        "reasonCodes": [
+          "ATTESTATION_MISMATCH",
+          "ATTESTATION_REQUIRED"
+        ],
+        "mirroredBy": [
+          "attestation",
+          "attestation"
+        ]
+      },
+      {
+        "section": "5. Reputation floor",
+        "reasonCodes": [
+          "REPUTATION_FROZEN"
+        ],
+        "mirroredBy": [
+          "reputation-floor"
+        ]
+      },
+      {
+        "section": "6. Amount is positive",
+        "reasonCodes": [
+          "NON_POSITIVE_AMOUNT"
+        ],
+        "mirroredBy": [
+          "amount-positive"
+        ]
+      },
+      {
+        "section": "7. Action kind allow / deny",
+        "reasonCodes": [
+          "ACTION_NOT_ALLOWED"
+        ],
+        "mirroredBy": [
+          "action-kind"
+        ]
+      },
+      {
+        "section": "7b. Velocity: burst window",
+        "reasonCodes": [
+          "ANOMALY_BURST"
+        ],
+        "mirroredBy": [
+          "anomaly-burst"
+        ]
+      },
+      {
+        "section": "8. Per-tx limit (reputation and breaker adjusted)",
+        "reasonCodes": [
+          "NO_LIMIT",
+          "PER_TX_LIMIT"
+        ],
+        "mirroredBy": [
+          "per-tx",
+          "per-tx"
+        ]
+      },
+      {
+        "section": "9. Rolling daily limit",
+        "reasonCodes": [
+          "DAILY_LIMIT"
+        ],
+        "mirroredBy": [
+          "daily-budget"
+        ]
+      },
+      {
+        "section": "10. Rolling monthly limit",
+        "reasonCodes": [
+          "MONTHLY_LIMIT"
+        ],
+        "mirroredBy": [
+          "monthly-budget"
+        ]
+      },
+      {
+        "section": "11. Aggregate vault limits",
+        "reasonCodes": [
+          "AGGREGATE_DAILY_LIMIT",
+          "AGGREGATE_MONTHLY_LIMIT"
+        ],
+        "mirroredBy": [
+          "aggregate-daily",
+          "aggregate-monthly"
+        ]
+      },
+      {
+        "section": "12. Counterparty controls",
+        "reasonCodes": [
+          "RECIPIENT_DENIED",
+          "RECIPIENT_NOT_ALLOWED"
+        ],
+        "mirroredBy": [
+          "recipient-deny",
+          "recipient-allow"
+        ]
+      },
+      {
+        "section": "13. Velocity: minimum interval",
+        "reasonCodes": [
+          "RATE_LIMIT_INTERVAL"
+        ],
+        "mirroredBy": [
+          "velocity-interval"
+        ]
+      },
+      {
+        "section": "15. Intent checks",
+        "reasonCodes": [
+          "ACTION_NOT_ALLOWED",
+          "DESTINATION_NOT_ALLOWED"
+        ],
+        "mirroredBy": [
+          "action-kind",
+          "destination"
+        ]
+      },
+      {
+        "section": "16. Anomaly: drainage concentration",
+        "reasonCodes": [
+          "ANOMALY_DRAINAGE"
+        ],
+        "mirroredBy": [
+          "anomaly-drainage"
+        ]
+      },
+      {
+        "section": "17. Anomaly: deviation from baseline",
+        "reasonCodes": [
+          "ANOMALY_DEVIATION"
+        ],
+        "mirroredBy": [
+          "anomaly-deviation"
+        ]
+      },
+      {
+        "section": "18. Approval threshold",
+        "reasonCodes": [
+          "APPROVAL_REQUIRED"
+        ],
+        "mirroredBy": [
+          "approval-threshold"
+        ]
+      },
+      {
+        "section": "19. Reputation floor (final)",
+        "reasonCodes": [
+          "REPUTATION_FROZEN"
+        ],
+        "mirroredBy": [
+          "reputation-floor"
+        ]
+      }
+    ],
+    "contractReasonCodesWithoutAMirror": [
+      "INSUFFICIENT_BALANCE"
+    ],
+    "aliases": {
+      "PAUSED": "POLICY_PAUSED",
+      "NO_LIMIT": "NO_LIMIT_FOR_ASSET"
+    }
+  },
+  "reasonCodes": {
+    "onChain": [
+      "ACTION_NOT_ALLOWED",
+      "AGENT_PAUSED",
+      "AGGREGATE_DAILY_LIMIT",
+      "AGGREGATE_MONTHLY_LIMIT",
+      "ANOMALY_BURST",
+      "ANOMALY_DEVIATION",
+      "ANOMALY_DRAINAGE",
+      "APPROVAL_REQUIRED",
+      "ATTESTATION_MISMATCH",
+      "ATTESTATION_REQUIRED",
+      "DAILY_LIMIT",
+      "DESTINATION_NOT_ALLOWED",
+      "EMERGENCY_FREEZE",
+      "INSUFFICIENT_BALANCE",
+      "MONTHLY_LIMIT",
+      "NON_POSITIVE_AMOUNT",
+      "NO_LIMIT",
+      "PAUSED",
+      "PER_TX_LIMIT",
+      "RATE_LIMIT_HOURLY",
+      "RATE_LIMIT_INTERVAL",
+      "RECIPIENT_DENIED",
+      "RECIPIENT_NOT_ALLOWED",
+      "REPUTATION_FROZEN",
+      "VAULT_PAUSED"
+    ],
+    "offChainOnly": [
+      "ACTOR_NOT_AGENT",
+      "POLICY_PAUSED",
+      "POLICY_EXPIRED",
+      "INVALID_ACTION",
+      "UNKNOWN_ASSET",
+      "INVALID_AMOUNT",
+      "NO_LIMIT_FOR_ASSET",
+      "INVALID_RECIPIENT",
+      "VENUE_NOT_ALLOWED",
+      "SLIPPAGE_TOO_HIGH",
+      "QUOTE_EXPIRED",
+      "MISSING_QUOTE",
+      "ORIGIN_ASSET_MISMATCH",
+      "REPLAY",
+      "APPROVAL_UNAVAILABLE",
+      "UNPRICED_ASSET",
+      "RISK_BUDGET_SHARE",
+      "RISK_NEW_COUNTERPARTY",
+      "AGENT_NOT_FOUND",
+      "EXECUTION_FAILED"
+    ]
+  },
+  "checks": [
+    {
+      "id": "daily-budget",
+      "title": "daily-budget",
+      "severity": "deny",
+      "reasonCode": null,
+      "reasonCodes": [
+        "DAILY_LIMIT"
+      ],
+      "onChain": true,
+      "contractSection": "9. Rolling daily limit",
+      "scenarios": [
+        2,
+        35,
+        48
+      ]
+    },
+    {
+      "id": "monthly-budget",
+      "title": "monthly-budget",
+      "severity": "deny",
+      "reasonCode": null,
+      "reasonCodes": [
+        "MONTHLY_LIMIT"
+      ],
+      "onChain": true,
+      "contractSection": "10. Rolling monthly limit",
+      "scenarios": [
+        2,
+        35
+      ]
+    },
+    {
+      "id": "structure",
+      "title": "Request shape",
+      "severity": "deny",
+      "reasonCode": "INVALID_ACTION",
+      "reasonCodes": [
+        "INVALID_ACTION"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        9,
+        10
+      ]
+    },
+    {
+      "id": "asset-registry",
+      "title": "Asset is declared in the policy",
+      "severity": "deny",
+      "reasonCode": "UNKNOWN_ASSET",
+      "reasonCodes": [
+        "UNKNOWN_ASSET"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        11
+      ]
+    },
+    {
+      "id": "amount-parses",
+      "title": "Amount is exact",
+      "severity": "deny",
+      "reasonCode": null,
+      "reasonCodes": [
+        "INVALID_AMOUNT"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        3,
+        4,
+        6
+      ]
+    },
+    {
+      "id": "amount-positive",
+      "title": "Amount is positive",
+      "severity": "deny",
+      "reasonCode": "NON_POSITIVE_AMOUNT",
+      "reasonCodes": [
+        "NON_POSITIVE_AMOUNT"
+      ],
+      "onChain": true,
+      "contractSection": "6. Amount is positive",
+      "scenarios": [
+        5
+      ]
+    },
+    {
+      "id": "actor",
+      "title": "Actor is a registered agent",
+      "severity": "deny",
+      "reasonCode": "ACTOR_NOT_AGENT",
+      "reasonCodes": [
+        "ACTOR_NOT_AGENT"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        15
+      ]
+    },
+    {
+      "id": "replay",
+      "title": "Action id is fresh",
+      "severity": "deny",
+      "reasonCode": "REPLAY",
+      "reasonCodes": [
+        "REPLAY"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        47
+      ]
+    },
+    {
+      "id": "paused",
+      "title": "Policy is armed",
+      "severity": "deny",
+      "reasonCode": "POLICY_PAUSED",
+      "reasonCodes": [
+        "POLICY_PAUSED"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        28
+      ]
+    },
+    {
+      "id": "expiry",
+      "title": "Policy has not expired",
+      "severity": "deny",
+      "reasonCode": "POLICY_EXPIRED",
+      "reasonCodes": [
+        "POLICY_EXPIRED"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        29
+      ]
+    },
+    {
+      "id": "vault-freeze",
+      "title": "Vault is not emergency-frozen",
+      "severity": "deny",
+      "reasonCode": "EMERGENCY_FREEZE",
+      "reasonCodes": [
+        "EMERGENCY_FREEZE"
+      ],
+      "onChain": true,
+      "contractSection": "1. Vault-level circuit breaker",
+      "scenarios": [
+        38
+      ]
+    },
+    {
+      "id": "vault-paused",
+      "title": "Vault is not paused",
+      "severity": "deny",
+      "reasonCode": "VAULT_PAUSED",
+      "reasonCodes": [
+        "VAULT_PAUSED"
+      ],
+      "onChain": true,
+      "contractSection": "1. Vault-level circuit breaker",
+      "scenarios": []
+    },
+    {
+      "id": "agent-paused",
+      "title": "Agent is not paused",
+      "severity": "deny",
+      "reasonCode": "AGENT_PAUSED",
+      "reasonCodes": [
+        "AGENT_PAUSED"
+      ],
+      "onChain": true,
+      "contractSection": "2. Agent-level circuit breaker",
+      "scenarios": []
+    },
+    {
+      "id": "agent-breaker",
+      "title": "Agent circuit breaker is clear",
+      "severity": "deny",
+      "reasonCode": "AGENT_PAUSED",
+      "reasonCodes": [
+        "AGENT_PAUSED"
+      ],
+      "onChain": true,
+      "contractSection": "2. Agent-level circuit breaker",
+      "scenarios": []
+    },
+    {
+      "id": "attestation",
+      "title": "TEE attestation matches the registered binary",
+      "severity": "deny",
+      "reasonCode": "ATTESTATION_REQUIRED",
+      "reasonCodes": [
+        "ATTESTATION_REQUIRED",
+        "ATTESTATION_MISMATCH"
+      ],
+      "onChain": true,
+      "contractSection": "4. TEE attestation",
+      "scenarios": [
+        39,
+        40
+      ]
+    },
+    {
+      "id": "reputation-floor",
+      "title": "Reputation is above the freeze threshold",
+      "severity": "deny",
+      "reasonCode": "REPUTATION_FROZEN",
+      "reasonCodes": [
+        "REPUTATION_FROZEN"
+      ],
+      "onChain": true,
+      "contractSection": "5. Reputation floor",
+      "scenarios": [
+        35
+      ]
+    },
+    {
+      "id": "action-kind",
+      "title": "Action kind is permitted",
+      "severity": "deny",
+      "reasonCode": "ACTION_NOT_ALLOWED",
+      "reasonCodes": [
+        "ACTION_NOT_ALLOWED"
+      ],
+      "onChain": true,
+      "contractSection": "7. Action kind allow / deny",
+      "scenarios": [
+        10,
+        16,
+        17,
+        18
+      ]
+    },
+    {
+      "id": "anomaly-burst",
+      "title": "No burst anomaly",
+      "severity": "deny",
+      "reasonCode": "ANOMALY_BURST",
+      "reasonCodes": [
+        "ANOMALY_BURST"
+      ],
+      "onChain": true,
+      "contractSection": "7b. Velocity: burst window",
+      "scenarios": [
+        32
+      ]
+    },
+    {
+      "id": "per-tx",
+      "title": "Per-transaction limit",
+      "severity": "deny",
+      "reasonCode": "PER_TX_LIMIT",
+      "reasonCodes": [
+        "PER_TX_LIMIT",
+        "UNPRICED_ASSET",
+        "NO_LIMIT_FOR_ASSET"
+      ],
+      "onChain": true,
+      "contractSection": "8. Per-tx limit (reputation and breaker adjusted)",
+      "scenarios": [
+        1,
+        2,
+        35,
+        36,
+        37
+      ]
+    },
+    {
+      "id": "aggregate-daily",
+      "title": "Aggregate daily limit across agents",
+      "severity": "deny",
+      "reasonCode": "AGGREGATE_DAILY_LIMIT",
+      "reasonCodes": [
+        "AGGREGATE_DAILY_LIMIT"
+      ],
+      "onChain": true,
+      "contractSection": "11. Aggregate vault limits",
+      "scenarios": [
+        2,
+        30
+      ]
+    },
+    {
+      "id": "aggregate-monthly",
+      "title": "Aggregate monthly limit across agents",
+      "severity": "deny",
+      "reasonCode": "AGGREGATE_MONTHLY_LIMIT",
+      "reasonCodes": [
+        "AGGREGATE_MONTHLY_LIMIT"
+      ],
+      "onChain": true,
+      "contractSection": "11. Aggregate vault limits",
+      "scenarios": [
+        2
+      ]
+    },
+    {
+      "id": "usd-price",
+      "title": "USD value is known",
+      "severity": "deny",
+      "reasonCode": "UNPRICED_ASSET",
+      "reasonCodes": [
+        "UNPRICED_ASSET"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": []
+    },
+    {
+      "id": "approval-threshold",
+      "title": "approval-threshold",
+      "severity": "approval",
+      "reasonCode": "APPROVAL_REQUIRED",
+      "reasonCodes": [
+        "APPROVAL_REQUIRED"
+      ],
+      "onChain": true,
+      "contractSection": "18. Approval threshold",
+      "scenarios": [
+        1,
+        2,
+        25,
+        30,
+        36,
+        48
+      ]
+    },
+    {
+      "id": "recipient-format",
+      "title": "Recipient is a valid account id",
+      "severity": "deny",
+      "reasonCode": "INVALID_RECIPIENT",
+      "reasonCodes": [
+        "INVALID_RECIPIENT"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        7,
+        8,
+        14
+      ]
+    },
+    {
+      "id": "recipient-deny",
+      "title": "Recipient is not blocked",
+      "severity": "deny",
+      "reasonCode": "RECIPIENT_DENIED",
+      "reasonCodes": [
+        "RECIPIENT_DENIED"
+      ],
+      "onChain": true,
+      "contractSection": "12. Counterparty controls",
+      "scenarios": [
+        13
+      ]
+    },
+    {
+      "id": "recipient-allow",
+      "title": "recipient-allow",
+      "severity": "deny",
+      "reasonCode": "RECIPIENT_NOT_ALLOWED",
+      "reasonCodes": [
+        "RECIPIENT_NOT_ALLOWED"
+      ],
+      "onChain": true,
+      "contractSection": "12. Counterparty controls",
+      "scenarios": [
+        12,
+        13,
+        31
+      ]
+    },
+    {
+      "id": "new-recipient",
+      "title": "First payment to a new recipient needs a human",
+      "severity": "approval",
+      "reasonCode": "APPROVAL_REQUIRED",
+      "reasonCodes": [
+        "APPROVAL_REQUIRED"
+      ],
+      "onChain": true,
+      "contractSection": "18. Approval threshold",
+      "scenarios": [
+        12,
+        13,
+        31
+      ]
+    },
+    {
+      "id": "velocity-hourly",
+      "title": "velocity-hourly",
+      "severity": "deny",
+      "reasonCode": "RATE_LIMIT_HOURLY",
+      "reasonCodes": [
+        "RATE_LIMIT_HOURLY"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": []
+    },
+    {
+      "id": "velocity-interval",
+      "title": "velocity-interval",
+      "severity": "deny",
+      "reasonCode": "RATE_LIMIT_INTERVAL",
+      "reasonCodes": [
+        "RATE_LIMIT_INTERVAL"
+      ],
+      "onChain": true,
+      "contractSection": "13. Velocity: minimum interval",
+      "scenarios": [
+        32,
+        33,
+        34,
+        47
+      ]
+    },
+    {
+      "id": "quote-present",
+      "title": "Swap carries a quote to check",
+      "severity": "deny",
+      "reasonCode": "MISSING_QUOTE",
+      "reasonCodes": [
+        "MISSING_QUOTE"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        19
+      ]
+    },
+    {
+      "id": "venue",
+      "title": "Swap venue is allowed",
+      "severity": "deny",
+      "reasonCode": "VENUE_NOT_ALLOWED",
+      "reasonCodes": [
+        "VENUE_NOT_ALLOWED"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        22
+      ]
+    },
+    {
+      "id": "slippage",
+      "title": "slippage",
+      "severity": "deny",
+      "reasonCode": "SLIPPAGE_TOO_HIGH",
+      "reasonCodes": [
+        "SLIPPAGE_TOO_HIGH"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        20
+      ]
+    },
+    {
+      "id": "quote-expiry",
+      "title": "Quote is still valid",
+      "severity": "deny",
+      "reasonCode": "QUOTE_EXPIRED",
+      "reasonCodes": [
+        "QUOTE_EXPIRED"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        23
+      ]
+    },
+    {
+      "id": "origin-asset",
+      "title": "Quote spends the expected asset",
+      "severity": "deny",
+      "reasonCode": "ORIGIN_ASSET_MISMATCH",
+      "reasonCodes": [
+        "ORIGIN_ASSET_MISMATCH"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": [
+        24
+      ]
+    },
+    {
+      "id": "destination",
+      "title": "Swap output goes to a pinned address",
+      "severity": "deny",
+      "reasonCode": "DESTINATION_NOT_ALLOWED",
+      "reasonCodes": [
+        "DESTINATION_NOT_ALLOWED"
+      ],
+      "onChain": true,
+      "contractSection": "15. Intent checks",
+      "scenarios": [
+        19,
+        21
+      ]
+    },
+    {
+      "id": "anomaly-drainage",
+      "title": "No drainage anomaly",
+      "severity": "deny",
+      "reasonCode": "ANOMALY_DRAINAGE",
+      "reasonCodes": [
+        "ANOMALY_DRAINAGE"
+      ],
+      "onChain": true,
+      "contractSection": "16. Anomaly: drainage concentration",
+      "scenarios": [
+        32,
+        33
+      ]
+    },
+    {
+      "id": "anomaly-deviation",
+      "title": "No deviation anomaly",
+      "severity": "deny",
+      "reasonCode": "ANOMALY_DEVIATION",
+      "reasonCodes": [
+        "ANOMALY_DEVIATION"
+      ],
+      "onChain": true,
+      "contractSection": "17. Anomaly: deviation from baseline",
+      "scenarios": [
+        34
+      ]
+    },
+    {
+      "id": "risk-escalation",
+      "title": "Large share of the daily budget needs a human",
+      "severity": "approval",
+      "reasonCode": "RISK_BUDGET_SHARE",
+      "reasonCodes": [
+        "RISK_BUDGET_SHARE"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": []
+    },
+    {
+      "id": "risk-new-counterparty",
+      "title": "New counterparties need a human",
+      "severity": "approval",
+      "reasonCode": "RISK_NEW_COUNTERPARTY",
+      "reasonCodes": [
+        "RISK_NEW_COUNTERPARTY"
+      ],
+      "onChain": false,
+      "contractSection": null,
+      "scenarios": []
+    }
+  ],
+  "scenarios": [
+    {
+      "id": 1,
+      "name": "Overspend one transfer (26 USDC)",
+      "description": "The agent asks for one more USDC than the per-tx limit allows.",
+      "wall": "per-transaction cap",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "PER_TX_LIMIT",
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "per-tx",
+        "approval-threshold"
+      ]
+    },
+    {
+      "id": 2,
+      "name": "Overspend native (1000 NEAR)",
+      "description": "Three orders of magnitude above the NEAR per-tx cap.",
+      "wall": "per-transaction cap",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "PER_TX_LIMIT",
+        "DAILY_LIMIT",
+        "MONTHLY_LIMIT",
+        "AGGREGATE_DAILY_LIMIT",
+        "AGGREGATE_MONTHLY_LIMIT",
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "per-tx",
+        "daily-budget",
+        "monthly-budget",
+        "aggregate-daily",
+        "aggregate-monthly",
+        "approval-threshold"
+      ]
+    },
+    {
+      "id": 3,
+      "name": "Extra decimals (5.0000001 USDC)",
+      "description": "A hidden fraction that a rounding engine would swallow.",
+      "wall": "exact amount parsing",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "INVALID_AMOUNT"
+      ],
+      "checks": [
+        "amount-parses"
+      ]
+    },
+    {
+      "id": 4,
+      "name": "Negative amount",
+      "description": "A negative transfer, hoping to add budget.",
+      "wall": "amount validation",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "INVALID_AMOUNT"
+      ],
+      "checks": [
+        "amount-parses"
+      ]
+    },
+    {
+      "id": 5,
+      "name": "Zero amount",
+      "description": "A zero-value transfer used as a probe.",
+      "wall": "amount validation",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "NON_POSITIVE_AMOUNT"
+      ],
+      "checks": [
+        "amount-positive"
+      ]
+    },
+    {
+      "id": 6,
+      "name": "Scientific notation (1e5)",
+      "description": "Scientific notation that some parsers accept and others truncate.",
+      "wall": "exact amount parsing",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "INVALID_AMOUNT"
+      ],
+      "checks": [
+        "amount-parses"
+      ]
+    },
+    {
+      "id": 7,
+      "name": "Wrong-case account id",
+      "description": "NEAR account ids are lowercase; Compute.NEAR is not the vendor.",
+      "wall": "account id validation",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "INVALID_RECIPIENT"
+      ],
+      "checks": [
+        "recipient-format"
+      ]
+    },
+    {
+      "id": 8,
+      "name": "Trailing-dot account id",
+      "description": "A trailing dot changes the account id, not the intent.",
+      "wall": "account id validation",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "INVALID_RECIPIENT"
+      ],
+      "checks": [
+        "recipient-format"
+      ]
+    },
+    {
+      "id": 9,
+      "name": "Empty action id",
+      "description": "Without an id there is no replay protection.",
+      "wall": "request shape",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "INVALID_ACTION"
+      ],
+      "checks": [
+        "structure"
+      ]
+    },
+    {
+      "id": 10,
+      "name": "Invented action kind",
+      "description": "A kind the policy has never heard of.",
+      "wall": "action allow list",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "INVALID_ACTION",
+        "ACTION_NOT_ALLOWED"
+      ],
+      "checks": [
+        "structure",
+        "action-kind"
+      ]
+    },
+    {
+      "id": 11,
+      "name": "Unregistered asset",
+      "description": "An asset with no limit applies to no limit.",
+      "wall": "deny-by-default asset registry",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "UNKNOWN_ASSET"
+      ],
+      "checks": [
+        "asset-registry"
+      ]
+    },
+    {
+      "id": 12,
+      "name": "Pay a stranger",
+      "description": "Strict mode: only listed vendors are reachable.",
+      "wall": "counterparty allow list",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "RECIPIENT_NOT_ALLOWED",
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "recipient-allow",
+        "new-recipient"
+      ]
+    },
+    {
+      "id": 13,
+      "name": "Pay the deny-listed drainer",
+      "description": "Explicit deny beats any allow-list accident.",
+      "wall": "counterparty deny list",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "RECIPIENT_DENIED",
+        "RECIPIENT_NOT_ALLOWED",
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "recipient-deny",
+        "recipient-allow",
+        "new-recipient"
+      ]
+    },
+    {
+      "id": 14,
+      "name": "Cyrillic homoglyph account",
+      "description": "A lookalike character cannot pass for the vendor.",
+      "wall": "account id validation",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "INVALID_RECIPIENT"
+      ],
+      "checks": [
+        "recipient-format"
+      ]
+    },
+    {
+      "id": 15,
+      "name": "Agent claims owner identity",
+      "description": "The actor is the owner, not a registered agent.",
+      "wall": "identity binding",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "ACTOR_NOT_AGENT"
+      ],
+      "checks": [
+        "actor"
+      ]
+    },
+    {
+      "id": 16,
+      "name": "Add a new access key",
+      "description": "Adding a key would escape every limit.",
+      "wall": "action kind allow list",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "ACTION_NOT_ALLOWED"
+      ],
+      "checks": [
+        "action-kind"
+      ]
+    },
+    {
+      "id": 17,
+      "name": "Delete the owner key",
+      "description": "Deleting a key is never a spending action.",
+      "wall": "action kind allow list",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "ACTION_NOT_ALLOWED"
+      ],
+      "checks": [
+        "action-kind"
+      ]
+    },
+    {
+      "id": 18,
+      "name": "Arbitrary contract call",
+      "description": "An arbitrary call could move anything.",
+      "wall": "action kind allow list",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "ACTION_NOT_ALLOWED"
+      ],
+      "checks": [
+        "action-kind"
+      ]
+    },
+    {
+      "id": 19,
+      "name": "Swap with no quote",
+      "description": "No quote means venue, slippage, expiry and destination are unverifiable.",
+      "wall": "quote validation",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "MISSING_QUOTE",
+        "DESTINATION_NOT_ALLOWED"
+      ],
+      "checks": [
+        "quote-present",
+        "destination"
+      ]
+    },
+    {
+      "id": 20,
+      "name": "Swap with 5% slippage",
+      "description": "Five percent is fifty times the 100 bps ceiling.",
+      "wall": "slippage ceiling",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "SLIPPAGE_TOO_HIGH"
+      ],
+      "checks": [
+        "slippage"
+      ]
+    },
+    {
+      "id": 21,
+      "name": "Swap with redirected output",
+      "description": "A valid quote with the output address swapped for the attacker.",
+      "wall": "destination pinning",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "DESTINATION_NOT_ALLOWED"
+      ],
+      "checks": [
+        "destination"
+      ]
+    },
+    {
+      "id": 22,
+      "name": "Unknown swap venue",
+      "description": "A venue the policy never approved.",
+      "wall": "venue allow list",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "VENUE_NOT_ALLOWED"
+      ],
+      "checks": [
+        "venue"
+      ]
+    },
+    {
+      "id": 23,
+      "name": "Expired quote",
+      "description": "A quote from before the demo started.",
+      "wall": "quote expiry",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "QUOTE_EXPIRED"
+      ],
+      "checks": [
+        "quote-expiry"
+      ]
+    },
+    {
+      "id": 24,
+      "name": "Quote asset mismatch",
+      "description": "The quote spends USDC while the action claims NEAR.",
+      "wall": "origin asset check",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "ORIGIN_ASSET_MISMATCH"
+      ],
+      "checks": [
+        "origin-asset"
+      ]
+    },
+    {
+      "id": 25,
+      "name": "Payment above approval threshold",
+      "description": "Twenty USDC is within the per-tx cap but above the $10 human line.",
+      "wall": "approval threshold",
+      "category": "basic",
+      "expect": "require_approval",
+      "verdict": "require_approval",
+      "passed": true,
+      "codes": [
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "approval-threshold"
+      ]
+    },
+    {
+      "id": 26,
+      "name": "Legitimate API payment",
+      "description": "Five USDC to an allow-listed vendor, below every threshold.",
+      "wall": "none - allowed",
+      "category": "basic",
+      "expect": "allow",
+      "verdict": "allow",
+      "passed": true,
+      "codes": [],
+      "checks": []
+    },
+    {
+      "id": 27,
+      "name": "Legitimate swap",
+      "description": "One NEAR on the allowed venue, to the pinned address, quote fresh.",
+      "wall": "none - allowed",
+      "category": "basic",
+      "expect": "allow",
+      "verdict": "allow",
+      "passed": true,
+      "codes": [],
+      "checks": []
+    },
+    {
+      "id": 28,
+      "name": "Anything while paused",
+      "description": "The owner paused the policy.",
+      "wall": "owner pause switch",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "POLICY_PAUSED"
+      ],
+      "checks": [
+        "paused"
+      ]
+    },
+    {
+      "id": 29,
+      "name": "Anything after expiry",
+      "description": "The policy validity window closed yesterday.",
+      "wall": "policy expiry",
+      "category": "basic",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "POLICY_EXPIRED"
+      ],
+      "checks": [
+        "expiry"
+      ]
+    },
+    {
+      "id": 30,
+      "name": "Agent A drains daily, B has budget",
+      "description": "argo spends its own daily cap; scout still has agent budget but the vault does not.",
+      "wall": "aggregate vault limit",
+      "category": "multi-agent",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "AGGREGATE_DAILY_LIMIT",
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "aggregate-daily",
+        "approval-threshold"
+      ]
+    },
+    {
+      "id": 31,
+      "name": "Two agents pay the same stranger",
+      "description": "Coordinated attempts to an unknown address are both refused by the strict list.",
+      "wall": "counterparty allow list",
+      "category": "multi-agent",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "RECIPIENT_NOT_ALLOWED",
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "recipient-allow",
+        "new-recipient"
+      ]
+    },
+    {
+      "id": 32,
+      "name": "Six rapid transactions from one agent",
+      "description": "Five transfers inside the burst window, then a sixth.",
+      "wall": "burst anomaly",
+      "category": "anomaly",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "ANOMALY_BURST",
+        "RATE_LIMIT_INTERVAL",
+        "ANOMALY_DRAINAGE"
+      ],
+      "checks": [
+        "anomaly-burst",
+        "velocity-interval",
+        "anomaly-drainage"
+      ]
+    },
+    {
+      "id": 33,
+      "name": "Five payments to one new address",
+      "description": "Half the daily cap concentrated on one destination, then more.",
+      "wall": "drainage anomaly",
+      "category": "anomaly",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "RATE_LIMIT_INTERVAL",
+        "ANOMALY_DRAINAGE"
+      ],
+      "checks": [
+        "velocity-interval",
+        "anomaly-drainage"
+      ]
+    },
+    {
+      "id": 34,
+      "name": "Transaction 10x the baseline",
+      "description": "Ten small payments build a baseline; the eleventh is ten times larger.",
+      "wall": "deviation anomaly",
+      "category": "anomaly",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "RATE_LIMIT_INTERVAL",
+        "ANOMALY_DEVIATION"
+      ],
+      "checks": [
+        "velocity-interval",
+        "anomaly-deviation"
+      ]
+    },
+    {
+      "id": 35,
+      "name": "Agent at reputation 0 tries to spend",
+      "description": "Ten denials drop reputation to zero; the agent is frozen.",
+      "wall": "reputation freeze",
+      "category": "reputation",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "REPUTATION_FROZEN",
+        "PER_TX_LIMIT",
+        "DAILY_LIMIT",
+        "MONTHLY_LIMIT"
+      ],
+      "checks": [
+        "reputation-floor",
+        "per-tx",
+        "daily-budget",
+        "monthly-budget"
+      ]
+    },
+    {
+      "id": 36,
+      "name": "Reputation 50, effective limit is half",
+      "description": "Five denials halve the effective per-tx cap to 12 USDC; the agent tries 15.",
+      "wall": "reputation-adjusted limit",
+      "category": "reputation",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "PER_TX_LIMIT",
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "per-tx",
+        "approval-threshold"
+      ]
+    },
+    {
+      "id": 37,
+      "name": "Circuit breaker level 1 active",
+      "description": "Level 1 reduces every limit to 10%; a normal-sized payment is now over the wall.",
+      "wall": "breaker limit reduction",
+      "category": "circuit",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "PER_TX_LIMIT"
+      ],
+      "checks": [
+        "per-tx"
+      ]
+    },
+    {
+      "id": 38,
+      "name": "Spend during emergency freeze",
+      "description": "A guardian froze the vault; no agent can spend.",
+      "wall": "vault freeze",
+      "category": "circuit",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "EMERGENCY_FREEZE"
+      ],
+      "checks": [
+        "vault-freeze"
+      ]
+    },
+    {
+      "id": 51,
+      "name": "Reputation recovers after 30 clean days",
+      "description": "Five denials, then thirty clean days: the next clean spend restores 20 points.",
+      "wall": "none - recovery allowed",
+      "category": "reputation",
+      "expect": "allow",
+      "verdict": "allow",
+      "passed": true,
+      "codes": [],
+      "checks": []
+    },
+    {
+      "id": 52,
+      "name": "Reputation 40, small spend within effective limits",
+      "description": "Six denials leave reputation 40; 5 USDC is within the adjusted 10 USDC per-tx cap.",
+      "wall": "none - allowed",
+      "category": "reputation",
+      "expect": "allow",
+      "verdict": "allow",
+      "passed": true,
+      "codes": [],
+      "checks": []
+    },
+    {
+      "id": 39,
+      "name": "Missing TEE attestation proof",
+      "description": "The agent has a registered binary hash but sends no proof.",
+      "wall": "attestation required",
+      "category": "attestation",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "ATTESTATION_REQUIRED"
+      ],
+      "checks": [
+        "attestation"
+      ]
+    },
+    {
+      "id": 40,
+      "name": "Wrong TEE attestation hash",
+      "description": "A forged proof does not hash to the registered value.",
+      "wall": "attestation mismatch",
+      "category": "attestation",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "ATTESTATION_MISMATCH"
+      ],
+      "checks": [
+        "attestation"
+      ]
+    },
+    {
+      "id": 41,
+      "name": "Timelocked withdrawal before delay",
+      "description": "The owner proposes a withdrawal and tries to execute immediately.",
+      "wall": "timelock not elapsed",
+      "category": "governance",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "TIMELOCK_NOT_EXECUTABLE"
+      ],
+      "checks": []
+    },
+    {
+      "id": 42,
+      "name": "Watcher cancels a suspicious timelock",
+      "description": "A watcher cancels a withdrawal before it can execute.",
+      "wall": "governance watcher cancellation",
+      "category": "governance",
+      "expect": "cancelled",
+      "verdict": "cancelled",
+      "passed": true,
+      "codes": [
+        "TIMELOCK_CANCELLED"
+      ],
+      "checks": []
+    },
+    {
+      "id": 43,
+      "name": "Guardian triggers emergency freeze",
+      "description": "Any guardian can stop the whole vault immediately.",
+      "wall": "governance freeze",
+      "category": "governance",
+      "expect": "frozen",
+      "verdict": "frozen",
+      "passed": true,
+      "codes": [
+        "EMERGENCY_FREEZE"
+      ],
+      "checks": []
+    },
+    {
+      "id": 44,
+      "name": "Owner thaws after a freeze",
+      "description": "Only the owner (or multisig) can restore spending.",
+      "wall": "governance thaw",
+      "category": "governance",
+      "expect": "thawed",
+      "verdict": "thawed",
+      "passed": true,
+      "codes": [
+        "THAWED"
+      ],
+      "checks": []
+    },
+    {
+      "id": 45,
+      "name": "Agent tries to approve its own payment",
+      "description": "The agent that requested a payment cannot co-sign it.",
+      "wall": "not an approver",
+      "category": "governance",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "NOT_AN_APPROVER"
+      ],
+      "checks": []
+    },
+    {
+      "id": 46,
+      "name": "Stale approval after a policy change",
+      "description": "A queued payment is re-checked against the tightened policy at approval time.",
+      "wall": "TOCTOU re-check",
+      "category": "governance",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "APPROVAL_RECHECK_FAILED"
+      ],
+      "checks": []
+    },
+    {
+      "id": 47,
+      "name": "Replay the same action id",
+      "description": "An action id is single-use.",
+      "wall": "replay protection",
+      "category": "governance",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "REPLAY",
+        "RATE_LIMIT_INTERVAL"
+      ],
+      "checks": [
+        "replay",
+        "velocity-interval"
+      ]
+    },
+    {
+      "id": 48,
+      "name": "Two approvals for the same budget",
+      "description": "Four pending approvals reserve 80 USDC; a fifth request cannot fit.",
+      "wall": "reservation accounting",
+      "category": "governance",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "DAILY_LIMIT",
+        "APPROVAL_REQUIRED"
+      ],
+      "checks": [
+        "daily-budget",
+        "approval-threshold"
+      ]
+    },
+    {
+      "id": 49,
+      "name": "Expired approval cannot execute",
+      "description": "The approval window passed while the human was away.",
+      "wall": "approval expiry",
+      "category": "governance",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "APPROVAL_EXPIRED"
+      ],
+      "checks": []
+    },
+    {
+      "id": 50,
+      "name": "Failed executor recorded as denial",
+      "description": "The chain rejected the transfer; the decision is recorded as a denial and the budget is not booked.",
+      "wall": "execution failure",
+      "category": "governance",
+      "expect": "deny",
+      "verdict": "deny",
+      "passed": true,
+      "codes": [
+        "EXECUTION_FAILED"
+      ],
+      "checks": []
+    }
+  ]
+}

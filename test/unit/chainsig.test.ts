@@ -1,4 +1,5 @@
 import { strict as assert } from 'node:assert';
+import { createServer } from 'node:http';
 import { test } from 'node:test';
 import {
   base58Decode,
@@ -43,18 +44,53 @@ test('a compressed key is refused instead of guessed', () => {
   assert.throws(() => evmAddressFromPublicKey(new Uint8Array(33).fill(2)), /64-byte/);
 });
 
-test('the MPC derives a stable address for (account, path)', async (t) => {
-  let key;
+test('the MPC client parses a signer response and derives the pinned address', async () => {
+  // A local signer response keeps this test offline while exercising the same
+  // request shape, base58 parsing and address derivation as the live call.
+  const publicKey = hex('79be667ef9dcbbac55a06295ce870b07029bfcdb2dce28d959f2815b16f81798483ada7726a3c4655da4fbfc0e1108a8fd17b448a68554199c47d08ffb10d4b8');
+  const encodedKey = `secp256k1:${base58Encode(publicKey)}`;
+  let requestBody = '';
+  const server = createServer((request, response) => {
+    request.setEncoding('utf8');
+    request.on('data', (chunk) => (requestBody += chunk));
+    request.on('end', () => {
+      response.writeHead(200, { 'content-type': 'application/json' });
+      response.end(
+        JSON.stringify({
+          jsonrpc: '2.0',
+          id: 'feral',
+          result: { result: [...Buffer.from(JSON.stringify(encodedKey))] },
+        }),
+      );
+    });
+  });
+  await new Promise<void>((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(0, '127.0.0.1', resolve);
+  });
   try {
-    key = await derivedPublicKey({ account: 'argo.testnet', path: 'ethereum-1', network: 'testnet' });
-  } catch (err) {
-    t.skip(`no network access to the signer contract: ${(err as Error).message}`);
-    return;
+    const address = server.address();
+    if (address === null || typeof address === 'string') throw new Error('test server did not bind a TCP port');
+    const key = await derivedPublicKey({
+      account: 'argo.testnet',
+      path: 'ethereum-1',
+      network: 'testnet',
+      rpc: `http://127.0.0.1:${address.port}`,
+    });
+    assert.equal(key.publicKey, encodedKey);
+    assert.equal(key.evmAddress, '0x7e5f4552091a69125d5dfcb7b8c2659029395bdf');
+
+    const request = JSON.parse(requestBody) as {
+      params: { method_name: string; account_id: string; args_base64: string };
+    };
+    assert.equal(request.params.method_name, 'derived_public_key');
+    assert.equal(request.params.account_id, 'v1.signer-prod.testnet');
+    assert.deepEqual(JSON.parse(Buffer.from(request.params.args_base64, 'base64').toString()), {
+      path: 'ethereum-1',
+      predecessor: 'argo.testnet',
+      key_version: 0,
+    });
+  } finally {
+    await new Promise<void>((resolve, reject) => server.close((err) => (err ? reject(err) : resolve())));
   }
-  assert.match(key.publicKey, /^secp256k1:/);
-  assert.match(key.evmAddress, /^0x[0-9a-f]{40}$/);
-  const again = await derivedPublicKey({ account: 'argo.testnet', path: 'ethereum-1', network: 'testnet' });
-  assert.equal(again.evmAddress, key.evmAddress);
-  const other = await derivedPublicKey({ account: 'argo.testnet', path: 'ethereum-2', network: 'testnet' });
-  assert.notEqual(other.evmAddress, key.evmAddress, 'a different path must give a different address');
 });

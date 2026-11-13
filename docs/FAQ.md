@@ -1,5 +1,8 @@
 # Feral FAQ
 
+**Can I see it without installing anything?**
+Yes. Open the [browser demo](https://raw.githack.com/Marvy247/Feral_/main/docs/demo/index.html), or the committed [docs/demo/index.html](demo/index.html). It is the shipping engine and the 52-scenario catalogue compiled into one static page: run the catalogue, inspect every check, and push actions through a live guard in the console. No wallet, key, server or network. `npm run demo:check` fails if that page is stale.
+
 **Where is the AI?**
 `npm run agent:attack` shows it. An agent is asked to summarize a vendor page;
 the page contains a hidden instruction to pay `attacker.near`. The planner
@@ -69,10 +72,11 @@ This is a hash commitment, not hardware verification: a real TEE quote would
 replace the proof, and the check would stay the same.
 
 **Does the demo need a wallet or network?**
-No. `npm run agent:attack`, `npm run demo:judge` and `npm run attack` run in
-memory, with the recorded policy and no dependencies. `npm run quote` and
-`npm run chainsig` use the network when it is available; the quote falls back to
-the recorded fixture, while `chainsig` reports the failure and exits 1.
+No. The browser demo is a single local HTML page. `npm run agent:attack`,
+`npm run demo:judge` and `npm run attack` run in memory, with the recorded policy
+and no dependencies. `npm run quote` and `npm run chainsig` use the network when
+it is available; the quote falls back to the recorded fixture, while `chainsig`
+reports the failure and exits 1.
 
 **Does Feral sign with NEAR chain signatures?**
 There is a live signing path: `npm run chain:mpc` builds an EIP-1559 transfer,
@@ -90,7 +94,7 @@ checks so a developer can preview a decision in microseconds, simulate a policy
 change, and drive the dashboard without a chain.
 
 **Is it audited?**
-No external audit has been conducted. The security claims are backed by 159
+No external audit has been conducted. The security claims are backed by 186
 JavaScript tests, 60 Rust contract tests, 52 adversarial scenarios, 37/37
 conformance checks against the live contract, and a formal invariant suite.
 The threat model documents every adversary considered and the residual risk of

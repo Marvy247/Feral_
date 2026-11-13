@@ -64,6 +64,7 @@ const documents = [
   'docs/FAQ.md',
   'docs/DEMO.md',
   'docs/TESTNET.md',
+  'docs/SUBMISSION.md',
   'contract/README.md',
   'src/app/README.md',
 ];
@@ -109,7 +110,11 @@ run('mvp demo', process.execPath, ['src/cli/mvp.ts']);
 run('use-case story', process.execPath, ['src/cli/story.ts']);
 run('agent loop', process.execPath, ['src/cli/agent.ts']);
 run('prompt-injection demo', process.execPath, ['src/cli/agent-attack.ts']);
+run('blocklist attack demo', process.execPath, ['src/cli/blocklist-attack.ts']);
 run('docs audit (commands and paths)', process.execPath, ['scripts/audit-docs.ts']);
+run('browser demo is current', process.execPath, ['scripts/build-demo.ts', '--check']);
+run('capability manifest is current', process.execPath, ['scripts/gen-capabilities.ts', '--check']);
+run('README numbers match the code', process.execPath, ['scripts/check-readme-numbers.ts'], 600_000);
 
 if (offline) {
   add('chain signatures', null, 'skipped (--offline)');

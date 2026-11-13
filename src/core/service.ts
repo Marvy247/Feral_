@@ -33,6 +33,7 @@ import {
 } from './engine.ts';
 import { formatAmount } from './money.ts';
 import { hashObject } from './canonical.ts';
+import { sharedBlocklist, type Blocklist, type BlocklistQueryResult } from './blocklist.ts';
 import {
   applyAnomaly,
   applyApproval,
@@ -115,6 +116,12 @@ export interface GuardConfig {
   executor?: (action: ActionRequest, decision: Decision) => Promise<ExecutionResult> | ExecutionResult;
   /** Refuse to load a different policy than this hash. */
   expectedPolicyHash?: string;
+  /**
+   * Shared blocklist registry for cross-vault counterparty checks.
+   * Defaults to the process-wide sharedBlocklist singleton.
+   * Pass `null` to disable the pre-check entirely.
+   */
+  blocklist?: Blocklist | null;
 }
 
 export interface ExecutionResult {
@@ -359,6 +366,55 @@ export class FeralGuard {
     const now = this.now();
     const record = this.agents.get(action.actor);
     const policy = this.policy;
+
+    // ── Blocklist pre-check ────────────────────────────────────────────────
+    // Run before evaluate() so a blocked counterparty never reaches the engine.
+    // `config.blocklist === null` disables the check; undefined uses the shared
+    // singleton. The result is injected into the action's reason field so the
+    // audit record carries the blocklist signal.
+    const bl: Blocklist | null = this.config.blocklist === undefined
+      ? sharedBlocklist
+      : (this.config.blocklist ?? null);
+
+    if (bl !== null && action.to) {
+      const blResult: BlocklistQueryResult = bl.query(action.to);
+      if (blResult.rating === 'block') {
+        const synthetic: Decision = {
+          id: action.id,
+          verdict: 'deny',
+          reasons: [{
+            code: 'RECIPIENT_DENIED',
+            severity: 'deny',
+            message: `counterparty ${action.to} is blocked by the shared registry: ${blResult.reasons.join('; ')}`,
+          }],
+          checks: [],
+          riskScore: 100,
+          policyHash: policy.hash,
+        };
+        this.attempts.push({ actionId: action.id, at: now, verdict: 'deny', reasonCodes: ['RECIPIENT_DENIED'] });
+        this.history.push({ action, at: now });
+        if (record) {
+          const repBefore = record.state.reputation;
+          record.state.reputation = applyDenial(repBefore, policy.reputation);
+          record.state.denyCount += 1;
+          this.auditFor(action, synthetic, 'deny', repBefore, record.state.reputation, record.state);
+        }
+        return { decision: synthetic, execution: null, approval: null };
+      }
+
+      if (blResult.rating === 'warn' && !options.dryRun) {
+        // Annotate the action reason so the guard's escalation heuristics see the
+        // signal. The engine may still deny for its own reasons.
+        action = {
+          ...action,
+          reason: [action.reason, `BLOCKLIST_WARN: ${blResult.reasons.join('; ')}`]
+            .filter(Boolean)
+            .join(' | '),
+        };
+      }
+    }
+    // ── end blocklist pre-check ────────────────────────────────────────────
+
     const decision = evaluate(policy, action, this.viewFor(action.actor), this.contextFor(action, policy));
 
     if (options.dryRun) {

@@ -17,6 +17,7 @@ import { readFileSync } from 'node:fs';
 import { join } from 'node:path';
 import vm from 'node:vm';
 import { CATALOGUE } from '../../src/demo/scenarios.ts';
+import { CAPABILITIES } from '../../src/generated/capabilities.ts';
 
 const root = join(import.meta.dirname, '..', '..');
 const html = readFileSync(join(root, 'docs', 'demo', 'index.html'), 'utf8');
@@ -138,6 +139,25 @@ test('the demo page script runs and renders the catalogue', async () => {
 
   const badge = getElementById('badge-hash');
   assert.match(badge.textContent, /policy [0-9a-f]{12}/, 'the policy hash badge was not filled');
+
+  // The verdict badge must state the truth: every scenario matched its
+  // expected verdict. (A precedence bug once rendered this as "MISMATCH".)
+  const verdictBadge = getElementById('badge-verdict');
+  assert.match(verdictBadge.textContent, /all verdicts match/, 'the verdict badge does not report the real result');
+  assert.doesNotMatch(verdictBadge.textContent, /MISMATCH/);
+
+  // The capability panel must quote the same numbers as the manifest.
+  const capabilityText = caps.children
+    .flatMap((card) => card.children.map((child) => child.textContent))
+    .join(' ');
+  assert.ok(
+    capabilityText.includes(String(CAPABILITIES.totals.onChainChecks)),
+    `the capability panel must state ${CAPABILITIES.totals.onChainChecks} on-chain checks`,
+  );
+  assert.ok(
+    capabilityText.includes(String(CAPABILITIES.totals.contractReasonCodes)),
+    `the capability panel must state ${CAPABILITIES.totals.contractReasonCodes} vault reason codes`,
+  );
 
   // The live console renders its action buttons.
   const actions = getElementById('actions');

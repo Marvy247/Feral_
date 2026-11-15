@@ -477,8 +477,10 @@
     var caps = $('caps');
     caps.textContent = '';
     var items = [
-      { n: payload.capability.offChainReasonCodes, l: 'reason codes in the off-chain mirror', s: 'src/core/engine.ts - includes the quote checks the contract cannot see' },
-      { n: payload.capability.onChainReasonCodes.length, l: 'reason codes the Rust vault enforces', s: 'contract/src/lib.rs - recomputed from the vault\'s own storage' },
+      { n: payload.capability.onChainChecks, l: 'checks the Rust vault enforces', s: 'contract/src/lib.rs - recomputed from the vault\'s own storage' },
+      { n: payload.capability.mirrorChecks, l: 'checks in the off-chain mirror', s: 'src/core/engine.ts - plus the quote checks the contract cannot see' },
+      { n: payload.capability.onChainReasonCodes.length, l: 'reason codes in the vault', s: 'one per refusal, read from the contract source' },
+      { n: payload.capability.offChainReasonCodes, l: 'reason codes in the mirror', s: 'src/core/engine.ts' },
       { n: payload.capability.contractLines, l: 'lines of Rust in the vault', s: 'contract/src/lib.rs' },
       { n: payload.capability.rustTests, l: 'Rust unit tests on a NEAR VM', s: 'cargo test - runs in CI' },
       { n: payload.totals.count, l: 'escape attempts with an asserted verdict', s: 'one catalogue, three consumers: tests, CLI, this page' },
@@ -645,9 +647,10 @@
     window.FERAL_DEMO.default.then(function (data) {
       payload = data;
       $('badge-hash').textContent = 'policy ' + data.product.policyHash.slice(0, 12);
-      $('badge-verdict').textContent =
-        data.totals.count + ' attempts · ' + data.totals.denied + ' denied · ' +
-        data.totals.failed === 0 ? 'all verdicts match' : 'MISMATCH';
+      var verdictText = data.totals.count + ' attempts · ' + data.totals.denied + ' denied · ' +
+        (data.totals.failed === 0 ? 'all verdicts match' : data.totals.failed + ' MISMATCH');
+      $('badge-verdict').textContent = verdictText;
+      $('badge-verdict').className = 'badge' + (data.totals.failed === 0 ? ' on' : '');
       renderFilters();
       renderRows();
       renderCapability();

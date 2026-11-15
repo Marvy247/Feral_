@@ -20,6 +20,7 @@
  */
 import { readFileSync } from 'node:fs';
 import { REASON, type ActionRequest, type CheckResult, type Decision } from '../core/engine.ts';
+import { formatAmount } from '../core/money.ts';
 import { FeralGuard } from '../core/service.ts';
 import { CATALOGUE, LAB, PRICES, START, runScenario, type ScenarioResult } from '../demo/scenarios.ts';
 
@@ -54,11 +55,14 @@ export interface DemoPayload {
   totals: { count: number; denied: number; escalated: number; allowed: number; failed: number };
   categories: { name: string; count: number; denied: number }[];
   capability: {
+    onChainChecks: number;
+    mirrorChecks: number;
     offChainReasonCodes: number;
     onChainReasonCodes: string[];
     contractLines: number;
     rustTests: number;
     scenarioCount: number;
+    source: string;
   };
   audit: { head: string; records: number; ok: boolean };
 }
@@ -70,14 +74,33 @@ interface ContractFacts {
   tests: number;
 }
 
-function contractFacts(): ContractFacts {
+/** The generated capability manifest, inlined into the page's virtual disk. */
+interface Manifest {
+  totals: {
+    engineChecks: number;
+    onChainChecks: number;
+    offChainOnlyChecks: number;
+    contractReasonCodes: number;
+    contractSections: number;
+    engineReasonCodes: number;
+    scenarios: number;
+    scenariosDenied: number;
+    scenariosEscalated: number;
+    scenariosAllowed: number;
+    scenariosFailing: number;
+  };
+}
+
+function readJson<T>(path: string): T | null {
   try {
-    const raw = readFileSync('/contract/contract-summary.json', 'utf8');
-    const parsed = JSON.parse(raw) as ContractFacts;
-    return parsed;
+    return JSON.parse(readFileSync(path, 'utf8')) as T;
   } catch {
-    return { reasonCodes: [], lines: 0, tests: 0 };
+    return null;
   }
+}
+
+function contractFacts(): ContractFacts {
+  return readJson<ContractFacts>('/contract/contract-summary.json') ?? { reasonCodes: [], lines: 0, tests: 0 };
 }
 
 /** Compute every scenario against a fresh guard, in order. */
@@ -116,6 +139,7 @@ export async function buildDemo(): Promise<DemoPayload> {
   });
 
   const facts = contractFacts();
+  const manifest = readJson<Manifest>('/docs/CAPABILITIES.json');
   const aggregate = ['NEAR', 'USDC'].map((asset) => ({
     asset,
     daily: guard.getAggregateRemaining(asset, 'day').toString(),
@@ -158,11 +182,14 @@ export async function buildDemo(): Promise<DemoPayload> {
     totals: { count: scenarios.length, denied, escalated, allowed, failed },
     categories,
     capability: {
-      offChainReasonCodes: Object.keys(REASON).length,
+      onChainChecks: manifest?.totals.onChainChecks ?? facts.reasonCodes.length,
+      mirrorChecks: manifest?.totals.engineChecks ?? Object.keys(REASON).length,
+      offChainReasonCodes: manifest?.totals.engineReasonCodes ?? Object.keys(REASON).length,
       onChainReasonCodes: facts.reasonCodes,
       contractLines: facts.lines,
       rustTests: facts.tests,
       scenarioCount: scenarios.length,
+      source: manifest ? 'docs/CAPABILITIES.json' : 'computed',
     },
     audit: { head: guard.auditLog.head(), records: guard.auditLog.length, ok: guard.auditLog.verify().ok },
   };
@@ -206,6 +233,7 @@ function liveGuard(): { guard: FeralGuard; clock: { t: number } } {
 
 export function createLiveSession(): LiveSession {
   const { guard, clock } = liveGuard();
+  const usdcDecimals = guard.compiled.assets.get('USDC')?.decimals ?? 6;
   const history: LiveState['history'] = [];
   let last: Decision | undefined;
 
@@ -216,7 +244,7 @@ export function createLiveSession(): LiveSession {
       reputation: agent?.reputation ?? 100,
       breakerLevel: agent?.circuitBreaker ?? 0,
       anomalyScore: guard.getAnomalyScore('argo.near'),
-      dailyRemaining: guard.getAggregateRemaining('USDC', 'day').toString(),
+      dailyRemaining: formatAmount(guard.getAggregateRemaining('USDC', 'day'), usdcDecimals),
       pendingApprovals: guard.pendingApprovals.map((a) => ({
         id: a.id,
         amount: a.action.amount,

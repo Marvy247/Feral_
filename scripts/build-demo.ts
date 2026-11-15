@@ -230,19 +230,28 @@ const modules = collect(ENTRY);
 const vfs: Record<string, string> = {
   'examples/policy.yaml': read('examples/policy.yaml'),
 };
+// The capability manifest is the single source of truth for the numbers the
+// page shows. It is inlined so the page cannot quote a different count than
+// the README and the repository do.
+if (existsSync(join(root, 'docs', 'CAPABILITIES.json'))) {
+  vfs['docs/CAPABILITIES.json'] = read('docs/CAPABILITIES.json');
+}
 
 /**
  * Facts about the Rust vault, read out of the contract source at build time so
  * the page cannot drift from the code it describes: the reason codes the vault
  * enforces, how big it is, and how many tests it carries.
+ *
+ * The reason codes are the `R_*` constants - the values the vault returns in a
+ * `deny` event. Scraping every uppercase string would also pick up anomaly
+ * flag names, so the count would be wrong.
  */
 function contractSummary(): { reasonCodes: string[]; lines: number; tests: number } {
   const source = read('contract/src/lib.rs');
   const codes = new Set<string>();
-  for (const match of source.matchAll(/"([A-Z][A-Z0-9_]{3,})"/g)) codes.add(match[1]!);
-  const reasonCodes = [...codes].sort();
+  for (const match of source.matchAll(/pub const R_[A-Z_]+: &str = "([A-Z_]+)"/g)) codes.add(match[1]!);
   return {
-    reasonCodes,
+    reasonCodes: [...codes].sort(),
     lines: source.split('\n').length,
     tests: (source.match(/#\[test\]/g) ?? []).length,
   };

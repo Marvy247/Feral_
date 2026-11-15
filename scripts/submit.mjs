@@ -145,7 +145,8 @@ console.log('the payload is valid against the published contract.');
 
 const shouldSend = process.argv.includes('--send');
 if (!shouldSend) {
-  console.log('nothing was sent. Run with --send when a human has read the payload above.');
+  const how = process.argv.includes('--dry-run') ? ' (dry run)' : '';
+  console.log(`nothing was sent${how}. Run with --send when a human has read the payload above.`);
   process.exit(0);
 }
 
